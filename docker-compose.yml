@@ -1,14 +1,11 @@
-version: '3.8'
-
 services:
   postgres:
-    image: pgvector/pgvector:pg15-latest
+    image: pgvector/pgvector:pg17
     container_name: postgres_iot_ganaderia
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres_password_123
       POSTGRES_DB: monitoreo_iot_ganaderia
-      POSTGRES_INITDB_ARGS: "-c shared_preload_libraries=pgvector"
     ports:
       - "5432:5432"
     volumes:

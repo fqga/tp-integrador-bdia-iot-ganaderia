@@ -1,7 +1,7 @@
 -- schema.sql
 -- Creación de todas las tablas del modelo físico
 
-CREATE EXTENSION IF NOT EXISTS pgvector;
+CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Tabla ESTANCIAS
 CREATE TABLE estancias (

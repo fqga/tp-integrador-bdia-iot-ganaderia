@@ -48,14 +48,14 @@ VALUES
   (9, 5, 'rfid', 'codigo', 0, 1000, 0.01, 'operacional', TRUE);
 
 -- Insertar animales
-INSERT INTO animales (id, estancia_id, tag_rfid, nombre_alias, raza, sexo, fecha_nacimiento, peso_actual_kg, estado_salud, ubicacion_actual_id, fecha_ingreso_estancia, activa)
-VALUES 
-  (1, 1, '9E-54-3F-AB-CD-01', 'Blanca', 'Hereford', 'hembra', '2024-06-15', 450.00, 'sano', 1, '2026-01-01', TRUE),
-  (2, 1, '9E-54-3F-AB-CD-02', 'Negra', 'Hereford', 'hembra', '2024-07-20', 480.00, 'sano', 1, '2026-01-10', TRUE),
-  (3, 1, '9E-54-3F-AB-CD-03', 'Rojo', 'Aberdeen Angus', 'macho', '2024-05-10', 520.00, 'sano', 1, '2025-12-20', TRUE),
-  (4, 1, '9E-54-3F-AB-CD-04', 'Manchado', 'Charolés', 'macho', '2024-08-01', 410.00, 'sano', 2, '2026-02-01', TRUE),
-  (5, 1, '9E-54-3F-AB-CD-05', 'Oscuro', 'Hereford', 'macho', '2024-06-25', 460.00, 'en_tratamiento', 2, '2026-01-15', TRUE),
-  (6, 1, '9E-54-3F-AB-CD-06', 'Claro', 'Aberdeen Angus', 'hembra', '2024-07-10', 420.00, 'sano', 1, '2026-01-20', TRUE);
+INSERT INTO animales (id, estancia_id, tag_rfid, nombre_alias, raza, sexo, fecha_nacimiento, peso_actual_kg, estado_salud, ubicacion_actual_id, fecha_ingreso_estancia)
+VALUES
+  (1, 1, '9E-54-3F-AB-CD-01', 'Blanca', 'Hereford', 'hembra', '2024-06-15', 450.00, 'sano', 1, '2026-01-01'),
+  (2, 1, '9E-54-3F-AB-CD-02', 'Negra', 'Hereford', 'hembra', '2024-07-20', 480.00, 'sano', 1, '2026-01-10'),
+  (3, 1, '9E-54-3F-AB-CD-03', 'Rojo', 'Aberdeen Angus', 'macho', '2024-05-10', 520.00, 'sano', 1, '2025-12-20'),
+  (4, 1, '9E-54-3F-AB-CD-04', 'Manchado', 'Charolés', 'macho', '2024-08-01', 410.00, 'sano', 2, '2026-02-01'),
+  (5, 1, '9E-54-3F-AB-CD-05', 'Oscuro', 'Hereford', 'macho', '2024-06-25', 460.00, 'en_tratamiento', 2, '2026-01-15'),
+  (6, 1, '9E-54-3F-AB-CD-06', 'Claro', 'Aberdeen Angus', 'hembra', '2024-07-10', 420.00, 'sano', 1, '2026-01-20');
 
 -- Insertar mediciones (últimas 24 horas aproximadamente)
 INSERT INTO mediciones (id, dispositivo_id, sensor_id, animal_id, timestamp, valor_medido, duracion_evento_segundos, temperatura_ambiental_celsius, es_anomalia)
@@ -82,12 +82,12 @@ VALUES
 -- Insertar alertas
 INSERT INTO alertas (id, animal_id, dispositivo_id, tipo_alerta, severidad, timestamp_alerta, descripcion, datos_contextuales, estado, usuario_responsable_id)
 VALUES 
-  (1, 5, NULL, 'bajo_consumo', 'alta', NOW() - INTERVAL '6 hours', 'Animal consume menos de lo esperado en últimas 24 horas', 
+  (1001, 5, NULL, 'bajo_consumo', 'alta', NOW() - INTERVAL '6 hours', 'Animal consume menos de lo esperado en últimas 24 horas',
     '{"consumo_esperado": 12.0, "consumo_actual": 6.8, "diferencia": -44.2, "promedio_7_dias": 12.5}', 'abierta', 4),
-  (2, 5, NULL, 'consumo_atipico', 'critica', NOW() - INTERVAL '5 hours', 'Consumo anómalo detectado automáticamente', 
-    '{"valor_medido": 6.1, "puntuacion_anomalia": 0.87, "timestamp_evento": "' || (NOW() - INTERVAL '5 hours')::TEXT || '"}', 'en_progreso', 4),
-  (3, NULL, 2, 'falla_sensor', 'media', NOW() - INTERVAL '2 hours', 'Sensor de bebedero no reporta datos', 
-    '{"sensor_id": 4, "dispositivo_id": 2, "ultima_lectura": "' || (NOW() - INTERVAL '6 hours')::TEXT || '"}', 'abierta', 2);
+  (1002, 5, NULL, 'consumo_atipico', 'critica', NOW() - INTERVAL '5 hours', 'Consumo anómalo detectado automáticamente',
+    ('{"valor_medido": 6.1, "puntuacion_anomalia": 0.87, "timestamp_evento": "' || (NOW() - INTERVAL '5 hours')::TEXT || '"}')::jsonb, 'en_progreso', 4),
+  (1003, NULL, 2, 'falla_sensor', 'media', NOW() - INTERVAL '2 hours', 'Sensor de bebedero no reporta datos',
+    ('{"sensor_id": 4, "dispositivo_id": 2, "ultima_lectura": "' || (NOW() - INTERVAL '6 hours')::TEXT || '"}')::jsonb, 'abierta', 2);
 
 -- Datos de ejemplo completados
 -- Total: 2 estancias, 5 usuarios, 5 ubicaciones, 5 dispositivos, 9 sensores, 6 animales, 17 mediciones, 3 alertas
