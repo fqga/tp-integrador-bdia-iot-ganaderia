@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg15-latest
+    container_name: postgres_iot_ganaderia
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password_123
+      POSTGRES_DB: monitoreo_iot_ganaderia
+      POSTGRES_INITDB_ARGS: "-c shared_preload_libraries=pgvector"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/estructura/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./db/estructura/indexes.sql:/docker-entrypoint-initdb.d/02_indexes.sql
+      - ./db/estructura/triggers.sql:/docker-entrypoint-initdb.d/03_triggers.sql
+      - ./db/estructura/rls.sql:/docker-entrypoint-initdb.d/04_rls.sql
+      - ./data/ejemplos/datos_simulados.sql:/docker-entrypoint-initdb.d/05_datos_simulados.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d monitoreo_iot_ganaderia"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - iot_network
+
+volumes:
+  postgres_data:
+
+networks:
+  iot_network:
+    driver: bridge
