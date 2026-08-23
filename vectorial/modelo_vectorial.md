@@ -1,4 +1,4 @@
-# MODELO VECTORIAL: Búsqueda por similitud de patrones de consumo
+# Modelo vectorial: búsqueda por similitud de patrones de consumo
 
 ## 1. Qué se vectoriza
 

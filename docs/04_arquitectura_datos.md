@@ -1,4 +1,4 @@
-# ARQUITECTURA DE DATOS: de la lectura del sensor a la alerta
+# Arquitectura de datos: de la lectura del sensor a la alerta
 
 ## 1. Por qué una arquitectura simple y no un Data Lake / Lakehouse
 

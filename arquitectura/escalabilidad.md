@@ -1,4 +1,4 @@
-# ESCALABILIDAD Y RENDIMIENTO
+# Escalabilidad y rendimiento
 
 ## 1. Qué tabla crece más, y por cuánto
 

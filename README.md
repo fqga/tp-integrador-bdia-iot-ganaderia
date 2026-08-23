@@ -1,16 +1,18 @@
-# Sistema de Monitoreo IoT con Análisis Predictivo para Ganadería
+# Sistema de monitoreo IoT con análisis predictivo para ganadería
 
-## Información del Proyecto
+## Información del proyecto
 
-**Trabajo Práctico Integrador**  
+**Trabajo práctico integrador**  
 Carrera de Especialización en Inteligencia Artificial  
 Cátedra: Bases de Datos para Inteligencia Artificial  
+Alumno: Facundo Manuel Quiroga
+Nro de SIU: a2305
 Docente: Martín Lacheski  
 Año: 2026
 
 ---
 
-## Resumen Ejecutivo
+## Resumen ejecutivo
 
 Este proyecto presenta el diseño de una **solución de datos para un sistema de monitoreo IoT en ganadería**. El sistema captura mediciones de consumo individual de animales mediante sensores RFID instalados en comederos inteligentes, permitiendo detectar anomalías, generar alertas predictivas y realizar análisis sobre patrones de consumo.
 
@@ -18,18 +20,18 @@ El enfoque está en el **diseño de la capa de datos** que sustenta una aplicaci
 
 ---
 
-## Caso de Uso Seleccionado
+## Caso de uso seleccionado
 
 **Monitoreo IoT con análisis predictivo**
 
-### Descripción del Contexto
+### Descripción del contexto
 
 Una organización ganadera posee comederos inteligentes instalados en diferentes ubicaciones (corrales, encierre, peseada, galpones). Cada comedero está equipado con:
 - **Sensor RFID**: identifica el animal mediante tag único
 - **Sensor de pesaje**: registra cantidad consumida
 - **Sensores ambientales**: temperatura, humedad (opcionales)
 
-### Problema a Resolver
+### Problema a resolver
 
 1. **Detección de anomalías**: identificar cambios en patrones de consumo que indiquen enfermedad o malestar
 2. **Alertas predictivas**: anticipar problemas de suministro o salud animal
@@ -38,9 +40,9 @@ Una organización ganadera posee comederos inteligentes instalados en diferentes
 
 ---
 
-## Datos Identificados
+## Datos identificados
 
-### Datos Principales (Estructurados)
+### Datos principales (estructurados)
 
 - **Usuarios**: peones, encargados, veterinarios, administradores
 - **Estancias**: unidades ganaderas (multi-tenancy)
@@ -51,29 +53,29 @@ Una organización ganadera posee comederos inteligentes instalados en diferentes
 - **Mediciones**: registros periódicos de consumo individual
 - **Alertas**: eventos detectados automáticamente
 
-### Datos para Análisis Predictivo (Vectoriales)
+### Datos para análisis predictivo (vectoriales)
 
 - Embeddings de patrones de consumo: representaciones vectoriales de secuencias temporales
 - Búsqueda de similitud para detectar comportamientos atípicos
 
 ---
 
-## Tecnologías Propuestas
+## Tecnologías propuestas
 
-### Base de Datos Principal
+### Base de datos principal
 - **PostgreSQL 15+**
   - Modelo relacional normalizado
   - Particionamiento temporal por mediciones
   - Row-Level Security (RLS) para multi-tenancy
   - JSONB para configuraciones flexibles
 
-### Búsqueda Vectorial
+### Búsqueda vectorial
 - **pgvector**: extensión de PostgreSQL para embeddings
   - Almacenamiento de vectores de patrones de consumo
   - Búsqueda por similitud para detectar anomalías
   - Integración nativa con la base relacional
 
-### Justificación de Elección
+### Justificación de elección
 
 PostgreSQL fue seleccionado porque:
 1. Maneja transacciones ACID para garantizar consistencia
@@ -84,7 +86,7 @@ PostgreSQL fue seleccionado porque:
 
 ---
 
-## Estructura del Repositorio
+## Estructura del repositorio
 
 ```
 tp-integrador-bdia-iot-ganaderia/
@@ -120,7 +122,7 @@ tp-integrador-bdia-iot-ganaderia/
 
 ---
 
-## Instrucciones de Uso
+## Instrucciones de uso
 
 ### Requisitos
 - Docker y Docker Compose instalados
@@ -203,14 +205,14 @@ docker-compose up -d
 
 ---
 
-## Decisiones de Diseño Principales
+## Decisiones de diseño principales
 
 ### 1. Multi-tenancy con Row-Level Security
 Se implementa mediante RLS nativa de PostgreSQL. Cada usuario solo ve datos de su estancia.
 - Ventaja: seguridad en base de datos, no en aplicación
 - Desventaja: overhead mínimo en performance
 
-### 2. Particionamiento Temporal de Mediciones
+### 2. Particionamiento temporal de mediciones
 Tabla `mediciones` particionada por rango de fecha (mensual).
 - Ventaja: escalabilidad, queries más rápidas, mantenimiento eficiente
 - Desventaja: complejidad en operaciones administrativas
@@ -218,17 +220,17 @@ Tabla `mediciones` particionada por rango de fecha (mensual).
 ### 3. Normalización 3NF
 El schema está en 3NF. Se mantiene disciplina de normalización para evitar anomalías.
 
-### 4. JSONB para Configuración Flexible
+### 4. JSONB para configuración flexible
 Dispositivos y sensores almacenan configuración en JSONB.
 - Ventaja: flexibilidad sin migración de schema
 - Desventaja: queries menos eficientes en búsquedas de JSON
 
-### 5. Sin Auditoría Centralizada
+### 5. Sin auditoría centralizada
 Se decide no incluir tabla de auditoría para simplificar scope. Focus en datos operativos.
 
 ---
 
-## Consultas Representativas Incluidas
+## Consultas representativas incluidas
 
 Las 8 consultas de `db/consultas/queries_representativas.sql`, probadas contra los datos de
 ejemplo (detalle y por qué es útil cada una en `docs/informe_tecnico.md`, sección 10):
@@ -244,18 +246,18 @@ ejemplo (detalle y por qué es útil cada una en `docs/informe_tecnico.md`, secc
 
 ---
 
-## Propuestas de Extensión
+## Propuestas de extensión
 
-### Búsqueda Vectorial
+### Búsqueda vectorial
 Se utiliza pgvector para crear embeddings de secuencias de consumo. Permite detectar animales con patrones anómalos comparando con el centroide del rebaño.
 
-### Escalabilidad Futura
+### Escalabilidad futura
 - Replicación read-only para reportes analíticos
 - Sharding horizontal si traspasa 100M mediciones/año
 - Data lake para histórico comprimido (parquet en S3)
 - Kafka para streaming de mediciones en tiempo real
 
-### Limitaciones Actuales
+### Limitaciones actuales
 - No se implementa cache en memoria (Redis)
 - No incluye API REST (solo SQL puro)
 - No modela predicción de fallas (ML está fuera de scope)
@@ -265,20 +267,6 @@ Se utiliza pgvector para crear embeddings de secuencias de consumo. Permite dete
 - La creación de particiones futuras de `mediciones` es manual (no hay un job automático que
   cree la partición del mes siguiente con anticipación — ver `arquitectura/escalabilidad.md`, sección 6)
 - No hay tabla de auditoría centralizada (decisión de scope, ver sección de decisiones de diseño)
-
----
-
-## Criterios de Evaluación Cumplidos
-
-| Criterio | Estado |
-|----------|--------|
-| Comprensión del caso de uso y relevamiento de datos | ✅ Completo |
-| Modelado de la solución de datos | ✅ ER + Lógico + Físico |
-| Implementación mínima y consultas representativas | ✅ 8 consultas |
-| Justificación de la selección tecnológica | ✅ PostgreSQL + pgvector |
-| Propuesta de arquitectura de datos y escalabilidad | ✅ Particionamiento + sharding |
-| Seguridad, permisos y aislamiento | ✅ RLS + Multi-tenancy |
-| Claridad del informe y organización del repo | ✅ Documentado |
 
 ---
 

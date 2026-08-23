@@ -1,6 +1,6 @@
-# MODELO CONCEPTUAL: Entidades, Atributos y Relaciones
+# Modelo conceptual: entidades, atributos y relaciones
 
-## 1. Diagrama ER (Representación Textual)
+## 1. Diagrama ER (representación textual)
 
 ```
 ┌─────────────────────┐         ┌──────────────────┐
@@ -109,7 +109,7 @@
 
 ---
 
-## 2. Descripción Detallada de Entidades
+## 2. Descripción detallada de entidades
 
 ### 2.1 USUARIOS
 
@@ -354,7 +354,7 @@
 - CHECK: humedad_ambiental_pct BETWEEN 0 AND 100
 - CHECK: puntuacion_anomalia BETWEEN 0 AND 1 OR puntuacion_anomalia IS NULL
 
-**Índices Críticos**:
+**Índices críticos**:
 ```sql
 INDEX: (timestamp DESC)                    
 INDEX: (animal_id, timestamp DESC)         
@@ -425,9 +425,9 @@ PARTITION BY RANGE (timestamp) monthly
 
 ---
 
-## 3. Relaciones y Cardinalidades
+## 3. Relaciones y cardinalidades
 
-### 3.1 Matriz de Relaciones
+### 3.1 Matriz de relaciones
 
 ```
 ORIGEN              →  DESTINO              TIPO  CARDINALIDAD  
@@ -446,7 +446,7 @@ ANIMALES            →  ESTANCIAS            FK    N:1
 ANIMALES            →  UBICACIONES (actual) FK    N:1           
 ```
 
-### 3.2 Cardinalidades Específicas
+### 3.2 Cardinalidades específicas
 
 | Relación | Cantidad | Ejemplo |
 |---|---|---|
@@ -460,9 +460,9 @@ ANIMALES            →  UBICACIONES (actual) FK    N:1
 
 ---
 
-## 4. Restricciones de Integridad
+## 4. Restricciones de integridad
 
-### 4.1 Restricciones de Dominio (CHECK)
+### 4.1 Restricciones de dominio (CHECK)
 
 ```sql
 -- USUARIOS
@@ -490,7 +490,7 @@ CHECK (fecha_egreso_estancia IS NULL OR fecha_egreso_estancia >= fecha_ingreso_e
 CHECK (estado_salud IN ('sano', 'enfermo', 'en_tratamiento', 'descarte'))
 ```
 
-### 4.2 Restricciones de Unicidad
+### 4.2 Restricciones de unicidad
 
 ```sql
 -- Global unique
@@ -507,7 +507,7 @@ UNIQUE (nombre)                        -- ESTANCIAS
 
 ---
 
-## 5. Conclusión del Modelo Conceptual
+## 5. Conclusión del modelo conceptual
 
 El modelo consta de **8 entidades principales** con **10 relaciones clave**, almacenando datos de **4 tipos diferentes**. Está **normalizado en 3NF**, soporta **multi-tenancy** mediante FK en ESTANCIAS y **RLS** en PostgreSQL.
 

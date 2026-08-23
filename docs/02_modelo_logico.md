@@ -1,6 +1,6 @@
-# MODELO LÓGICO: Normalización y diseño relacional
+# Modelo lógico: normalización y diseño relacional
 
-## 1. Transición del Modelo Conceptual al Lógico
+## 1. Transición del modelo conceptual al lógico
 
 El **modelo conceptual** describe qué datos existen y cómo se relacionan en el dominio (sin preocuparse por tecnología). El **modelo lógico** traduce esto a una estructura relacional normalizada, considerando:
 
@@ -305,7 +305,7 @@ CREATE TABLE mediciones (
 
 **Justificación 3NF**: La clave primaria es `id`. Las dependencias a otras entidades se expresan mediante claves foráneas. Todos los atributos describen una medición específica sin transitividades. El campo `datos_crudos` en formato JSONB permite capturar información variable sin afectar la normalización.
 
-**Nota sobre Particionamiento**: Esta tabla será particionada por timestamp en la implementación física (Fase 3), pero a nivel lógico se trata de una tabla única.
+**Nota sobre particionamiento**: Esta tabla será particionada por timestamp en la implementación física, pero a nivel lógico se trata de una tabla única.
 
 ---
 
@@ -366,7 +366,7 @@ En un sistema de producción con millones de animales, esta consulta se ejecutar
 - Ventaja: Consulta O(1) - lectura directa sin cálculo
 - Desventaja: Overhead de mantenimiento mediante trigger o batch job
 
-**Estrategia de consistencia** (implementada en Fase 3):
+**Estrategia de consistencia** (implementada mediante trigger, ver `db/estructura/triggers.sql`):
 ```sql
 CREATE OR REPLACE FUNCTION actualizar_cantidad_animales()
 RETURNS TRIGGER AS $$
@@ -663,7 +663,7 @@ El modelo final es:
 - Libre de anomalías de actualización, inserción y eliminación
 - Preparado para multi-tenancy mediante FK a ESTANCIAS
 - ACID-compliant para garantizar consistencia
-- Escalable mediante particionamiento temporal (implementado en Fase 3)
+- Escalable mediante particionamiento temporal (ver `db/estructura/particiones.sql`)
 - Flexible mediante JSONB para configuraciones variables
 
 La siguiente fase implementará este modelo lógico como SQL físico en PostgreSQL, incluyendo índices, particionamiento y seguridad.

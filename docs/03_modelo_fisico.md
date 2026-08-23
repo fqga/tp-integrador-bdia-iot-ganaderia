@@ -1,4 +1,4 @@
-# MODELO FÍSICO: Implementación en PostgreSQL
+# Modelo físico: implementación en PostgreSQL
 
 ## 1. Introducción
 
@@ -520,13 +520,11 @@ EXECUTE FUNCTION actualizar_ubicacion_animal();
 `BEFORE INSERT OR UPDATE` sobre `mediciones`: compara el nuevo valor contra el promedio ±2
 desviaciones estándar de las mediciones previas del mismo animal en los últimos 7 días.
 
-**Corrección aplicada sobre la primera versión**: con menos de ~5 mediciones previas, la
-desviación estándar de la muestra es 0 (con 1 dato) o un valor muy inestable, así que
-*cualquier* variación normal de un animal sano quedaba marcada como anomalía — se detectó
-este falso positivo al cargar los primeros datos de ejemplo (6 de 17 mediciones marcadas como
-"crítica" incluyendo animales sanos). La versión final exige un mínimo de 5 mediciones previas
-antes de evaluar, y aplica un piso de desviación (5% del promedio) para evitar límites de
-ancho cero cuando el historial fue casi constante:
+**Umbral mínimo de historial**: con menos de ~5 mediciones previas, la desviación estándar de
+la muestra es 0 (con 1 dato) o un valor muy inestable, así que *cualquier* variación normal de
+un animal sano quedaría marcada como anomalía. Por eso el trigger exige un mínimo de 5
+mediciones previas antes de evaluar, y aplica un piso de desviación (5% del promedio) para
+evitar límites de ancho cero cuando el historial fue casi constante:
 
 ```sql
 CREATE OR REPLACE FUNCTION detectar_anomalia()

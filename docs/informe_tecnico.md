@@ -1,8 +1,8 @@
-# INFORME TÉCNICO: Sistema de Monitoreo IoT con Análisis Predictivo para Ganadería
+# Informe técnico: sistema de monitoreo IoT con análisis predictivo para ganadería
 
-## 1. Descripción del Caso de Uso
+## 1. Descripción del caso de uso
 
-### 1.1 Contexto y Problemática
+### 1.1 Contexto y problemática
 
 En operaciones ganaderas modernas, la salud y el bienestar animal son críticos para la rentabilidad. Tradicionalmente, el monitoreo del consumo de alimento se realiza de manera manual: observación visual, pesajes puntuales, registros en papel. Este enfoque presenta limitaciones:
 
@@ -11,7 +11,7 @@ En operaciones ganaderas modernas, la salud y el bienestar animal son críticos 
 - **Imposibilidad de análisis**: sin datos históricos granulares, no se pueden identificar tendencias
 - **Imposibilidad de comparación**: cada animal en su contexto, sin benchmark
 
-### 1.2 Solución Propuesta
+### 1.2 Solución propuesta
 
 Se diseña un **sistema de datos** que sustenta una aplicación IoT para monitoreo continuo de consumo individual mediante:
 
@@ -21,23 +21,23 @@ Se diseña un **sistema de datos** que sustenta una aplicación IoT para monitor
 4. **Detección de anomalías** mediante análisis de patrones de consumo
 5. **Generación de alertas** automáticas ante cambios relevantes
 
-### 1.3 Actores del Sistema
+### 1.3 Actores del sistema
 
 - **Peones**: operarios que revisan corrales, resuelven alertas
 - **Encargado de producción**: supervisa múltiples ubicaciones, analiza tendencias
 - **Veterinario**: accede a datos para diagnóstico y tratamiento
 - **Administrador**: gestiona dispositivos, usuarios, configuraciones
 
-### 1.4 Objetivos de la Solución
+### 1.4 Objetivos de la solución
 
-**Objetivos Técnicos de Datos:**
+**Objetivos técnicos de datos:**
 1. Almacenar mediciones de forma eficiente (10-100 registros/segundo por estancia)
 2. Consultar históricos completos con latencia aceptable (<1 segundo)
 3. Detectar eventos anómalos en tiempo real
 4. Generar alertas automáticas según reglas configurables
 5. Escalar sin degradación de performance ante crecimiento de datos
 
-**Objetivos Empresariales:**
+**Objetivos empresariales:**
 1. Anticipar problemas de salud animal
 2. Optimizar consumo de alimento
 3. Reducir mortalidad y morbilidad
@@ -46,9 +46,9 @@ Se diseña un **sistema de datos** que sustenta una aplicación IoT para monitor
 
 ---
 
-## 2. Relevamiento de Datos Necesarios
+## 2. Relevamiento de datos necesarios
 
-### 2.1 Entidades Principales del Dominio
+### 2.1 Entidades principales del dominio
 
 #### USUARIOS
 Personas que interactúan con el sistema.
@@ -134,7 +134,7 @@ Eventos detectados por lógica de reglas.
 
 ---
 
-### 2.2 Relaciones Principales
+### 2.2 Relaciones principales
 
 | Origen | Destino | Tipo | Cardinalidad | Justificación |
 |--------|---------|------|--------------|---------------|
@@ -151,28 +151,28 @@ Eventos detectados por lógica de reglas.
 
 ---
 
-### 2.3 Restricciones de Integridad
+### 2.3 Restricciones de integridad
 
-**Restricciones de Unicidad:**
+**Restricciones de unicidad:**
 - `tag_id` en ANIMALES: identificador RFID único en estancia
 - `serial` en DISPOSITIVOS: identificador de hardware único globalmente
 - Email en USUARIOS: email único por estancia
 
-**Restricciones de Formato:**
+**Restricciones de formato:**
 - Tag RFID: formato hexadecimal, longitud fija
 - Email: formato válido
 - Temperaturas: rango -40°C a +50°C
 - Consumo: valores positivos
 
-**Restricciones Temporales:**
+**Restricciones temporales:**
 - Mediciones deben estar ordenadas temporalmente
 - Alertas resueltas tienen timestamp de resolución > timestamp de alerta
 
 ---
 
-### 2.4 Flujos de Datos Principales
+### 2.4 Flujos de datos principales
 
-**Flujo 1: Captura de Medición**
+**Flujo 1: Captura de medición**
 ```
 Dispositivo RFID → Lee tag animal
          ↓
@@ -185,7 +185,7 @@ Trigger calcula promedio → Evalúa anomalía
 Si anomalía → Crea registro en ALERTAS
 ```
 
-**Flujo 2: Resolución de Alerta**
+**Flujo 2: Resolución de alerta**
 ```
 Peón ve alerta → Inspecciona animal
          ↓
@@ -198,13 +198,13 @@ Sistema registra resolución: timestamp, usuario_id
 
 ---
 
-## 3. Clasificación de los Datos Según su Tipo
+## 3. Clasificación de los datos según su tipo
 
-### 3.1 Datos Estructurados (80% del volumen)
+### 3.1 Datos estructurados (80% del volumen)
 
 Son datos que responden a un esquema riguroso, almacenables en tablas relacionales.
 
-**Entidades Core:**
+**Entidades core:**
 - USUARIOS, ESTANCIAS, UBICACIONES
 - DISPOSITIVOS, SENSORES
 - ANIMALES
@@ -218,12 +218,12 @@ Son datos que responden a un esquema riguroso, almacenables en tablas relacional
 - Altos requerimientos de integridad referencial
 - Transacciones ACID
 
-**Volumen Estimado:**
+**Volumen estimado:**
 - MEDICIONES: 10-100 registros/segundo por estancia
 - En 1 año: 315M a 3.15B registros
 - Tamaño: 30-300 GB/año por estancia
 
-### 3.2 Datos Semi-Estructurados (15% del volumen)
+### 3.2 Datos semi-estructurados (15% del volumen)
 
 Datos que varían en estructura, almacenados en JSONB.
 
@@ -251,10 +251,10 @@ Datos que varían en estructura, almacenados en JSONB.
 - Queryable parcialmente en SQL (operadores JSONB)
 - Permite evolución sin migración
 
-**Volumen Estimado:**
+**Volumen estimado:**
 - ~200 bytes por medición: 60-600 GB/año
 
-### 3.3 Datos No Estructurados (5% del volumen)
+### 3.3 Datos no estructurados (5% del volumen)
 
 Datos libres de formato, generalmente texto.
 
@@ -267,10 +267,10 @@ Datos libres de formato, generalmente texto.
 - Almacenables en columnas TEXT
 - Indexables mediante full-text search
 
-**Volumen Estimado:**
+**Volumen estimado:**
 - ~100 bytes por alerta de texto
 
-### 3.4 Datos Vectoriales (1% del volumen, pero crítico para IA)
+### 3.4 Datos vectoriales (1% del volumen, pero crítico para IA)
 
 Representaciones numéricas multidimensionales para búsqueda por similitud.
 
@@ -279,7 +279,7 @@ Representaciones numéricas multidimensionales para búsqueda por similitud.
   - Entrenado sobre secuencias de 30 mediciones consecutivas
   - Permite encontrar animales "similares" en comportamiento
 
-**Casos de Uso:**
+**Casos de uso:**
 1. **Detección de anomalías**: comparar embedding actual contra histórico
 2. **Detección de epidemias**: encontrar múltiples animales con patrones anómalos similares
 3. **Predicción de problemas**: clusters de animales con riesgo similar
@@ -289,15 +289,15 @@ Representaciones numéricas multidimensionales para búsqueda por similitud.
 - Almacenados en columnas vectoriales (pgvector)
 - Queryables mediante búsqueda de similitud
 
-**Volumen Estimado:**
+**Volumen estimado:**
 - 768 dimensiones × 4 bytes = ~3KB por vector
 - Si se genera 1 vector por animal/día: 3KB × 10K animales × 365 días = ~11 GB/año
 
 ---
 
-### 3.5 Matriz de Almacenamiento Recomendado
+### 3.5 Matriz de almacenamiento recomendado
 
-| Tipo de Dato | Dónde Almacenar | Tecnología | Justificación |
+| Tipo de dato | Dónde almacenar | Tecnología | Justificación |
 |---|---|---|---|
 | **Estructurados** | PostgreSQL (tablas normalizadas) | SQL relacional | ACID, integridad, queries complejas |
 | **Semi-estructurados** | PostgreSQL (JSONB) | Column type JSONB | Flexibilidad sin migración |
@@ -312,7 +312,7 @@ Se han identificado **8 entidades principales** con **10 relaciones clave**, alm
 
 ---
 
-## 4. Modelo Conceptual
+## 4. Modelo conceptual
 
 El modelo conceptual completo (diagrama entidad-relación en representación textual, atributos
 por entidad con tipo/restricciones/justificación, matriz de cardinalidades y restricciones de
@@ -322,7 +322,7 @@ integridad) está en `docs/01_modelo_conceptual.md`. En síntesis: 8 entidades �
 cadenas de dependencia: una organizacional (`estancias → ubicaciones → dispositivos →
 sensores`) y una operacional (`animales`/`dispositivos`/`sensores → mediciones → alertas`).
 
-## 5. Modelo de Implementación según Tecnología Elegida
+## 5. Modelo de implementación según tecnología elegida
 
 Se eligió un modelo **relacional normalizado en PostgreSQL 17**, con la extensión `pgvector`
 para la porción vectorial (no una base vectorial separada — justificado en la sección 11 y en
@@ -335,7 +335,7 @@ sin animal o dispositivo válido no tiene sentido) encaja mejor en relacional qu
 documental/clave-valor/columnar/grafos, según se argumenta en la sección 11 de
 `docs/02_modelo_logico.md`.
 
-## 6. Decisiones de Normalización, Embebido, Referencia o Desnormalización
+## 6. Decisiones de normalización, embebido, referencia o desnormalización
 
 El esquema está en **3NF** con **tres desnormalizaciones controladas**, cada una justificada
 por una necesidad de consulta frecuente y con su mecanismo de consistencia (trigger) explícito
@@ -356,7 +356,7 @@ No hay "embebido" en el sentido NoSQL porque no se usó un motor documental; el 
 relacional de esa decisión es precisamente el uso de JSONB descripto arriba, en vez de romper
 esos atributos variables en tablas 1:1 adicionales.
 
-## 7. Justificación de la Tecnología Seleccionada
+## 7. Justificación de la tecnología seleccionada
 
 PostgreSQL + pgvector se eligió sobre las alternativas evaluadas por estas razones concretas
 al caso de uso (comparación completa contra MongoDB en `docs/02_modelo_logico.md`, sección 8):
@@ -384,27 +384,26 @@ si el volumen supera lo que una instancia sostiene, la vía es sharding manual p
 `estancia_id` (ver `arquitectura/escalabilidad.md`, sección 5), no un mecanismo automático del
 motor.
 
-## 8. Implementación Mínima Realizada
+## 8. Implementación mínima realizada
 
-Todo lo siguiente es SQL real, ejecutado y verificado contra un PostgreSQL 17 +
-`pgvector/pgvector:pg17` levantado con `docker-compose up -d` (no es solo documentación — se
-corrió el pipeline completo de principio a fin antes de esta entrega):
+La implementación es SQL real contra PostgreSQL 17 con `pgvector/pgvector:pg17`, levantado con
+`docker-compose up -d`:
 
-| Archivo | Contenido | Verificado |
+| Archivo | Contenido | Comportamiento esperado |
 |---|---|---|
-| `db/estructura/schema.sql` | 8 tablas, constraints, `mediciones` declarada `PARTITION BY RANGE` | Crea sin errores |
-| `db/estructura/particiones.sql` | 12 particiones mensuales de 2026 + partición `DEFAULT` | 353 filas distribuidas correctamente por mes |
+| `db/estructura/schema.sql` | 8 tablas, constraints, `mediciones` declarada `PARTITION BY RANGE` | Crea las tablas sin errores de integridad |
+| `db/estructura/particiones.sql` | 12 particiones mensuales de 2026 + partición `DEFAULT` | Las 353 filas de ejemplo se distribuyen correctamente por mes |
 | `db/estructura/indexes.sql` | Índices por FK, parciales (anomalías, alertas activas) y vectorial (`ivfflat`) | Se propagan a todas las particiones |
 | `db/estructura/triggers.sql` | Desnormalización + detección de anomalías + alertas automáticas | Ver corrección de falso-positivo en sección 6 de `docs/03_modelo_fisico.md` |
-| `db/estructura/rls.sql` | Rol `app_user` + políticas RLS por estancia (incluida `estancias`) | Aislamiento probado: estancia 2 solo ve sus 2 animales, nunca los 6 de estancia 1 |
+| `db/estructura/rls.sql` | Rol `app_user` + políticas RLS por estancia (incluida `estancias`) | Aísla correctamente: estancia 2 solo accede a sus propios animales, nunca a los de estancia 1 |
 | `db/estructura/views.sql` | 4 vistas para consultas frecuentes | Usadas por la consulta representativa #7 |
-| `db/vectorial/embeddings.sql` | Función `animales_similares()` sobre `<=>` (coseno) | Devuelve ranking coherente (ver sección 10) |
+| `db/vectorial/embeddings.sql` | Función `animales_similares()` sobre `<=>` (coseno) | Devuelve un ranking coherente (ver sección 10) |
 | `data/ejemplos/datos_simulados.sql` | Carga completa (sección 9) | 353 mediciones, 8 alertas, ~168 vectores |
 
 Orden de ejecución y por qué importa (particiones antes que índices, todo antes que RLS y
 datos): `docs/03_modelo_fisico.md`, sección 11.
 
-## 9. Datos de Ejemplo Utilizados
+## 9. Datos de ejemplo utilizados
 
 `data/ejemplos/datos_simulados.sql` genera, de forma reproducible (`setseed`) y relativa a la
 fecha de ejecución (no fechas fijas):
@@ -423,14 +422,14 @@ fecha de ejecución (no fechas fijas):
   tratamiento durante su semana de caída — alcanza para que una búsqueda de similitud agrupe
   correctamente sanos vs. enfermo (justificado en `vectorial/modelo_vectorial.md`, sección 1).
 - **8 alertas**: 3 cargadas a mano + 5 generadas automáticamente por el trigger al insertar
-  las mediciones del animal 5 (evidencia de que el trigger funciona sobre datos reales, no
-  solo en la definición).
+  las mediciones del animal 5, mostrando el disparo del trigger sobre datos con la caída de
+  consumo real, no solo sobre su definición.
 
-No se generaron datos para "probar que falla": las restricciones CHECK/UNIQUE/FK del schema
-se validaron implícitamente al no obtener ningún error de integridad durante la carga completa
-de las 353 mediciones + 8 alertas + el resto del catálogo.
+El criterio de carga no busca casos que violen las restricciones del schema: las mediciones,
+alertas y el resto del catálogo se generan siempre dentro de los rangos válidos de cada CHECK,
+UNIQUE y FK, de modo que la carga completa respete la integridad definida en el modelo físico.
 
-## 10. Consultas Representativas
+## 10. Consultas representativas
 
 Las 8 consultas de `db/consultas/queries_representativas.sql` (todas probadas contra los datos
 de ejemplo, conectando como `app_user` salvo donde se indica lo contrario):
@@ -448,7 +447,7 @@ Cada una responde una pregunta operativa real del caso de uso (no son variacione
 de `SELECT *`) y juntas cubren selección/filtrado, joins multi-tabla, agregación, funciones de
 ventana, y la consulta que justifica un índice — el mínimo pedido por la consigna.
 
-## 11. Propuesta para Datos Semiestructurados, No Estructurados y Vectoriales
+## 11. Propuesta para datos semiestructurados, no estructurados y vectoriales
 
 - **Semiestructurados** (JSONB): `dispositivos.configuracion`, `mediciones.datos_crudos`,
   `alertas.datos_contextuales` — justificado en la sección 6.
@@ -460,7 +459,7 @@ ventana, y la consulta que justifica un índice — el mínimo pedido por la con
   vectoriza (patrón diario de consumo, no cada evento), dónde vive (columna de `mediciones`,
   no un almacén separado), qué consultas resuelve, y cómo hereda el aislamiento RLS.
 
-## 12. Propuesta de Arquitectura de Datos
+## 12. Propuesta de arquitectura de datos
 
 Desarrollada en `docs/04_arquitectura_datos.md`: arquitectura de una sola base operacional
 (no Data Lake/Warehouse/Lakehouse) con separación **lógica** por capas de procesamiento
@@ -469,15 +468,16 @@ necesidad de respuesta en segundos sobre datos recientes, no de análisis batch 
 historia. Incluye el diagrama de flujo desde el sensor hasta cada tipo de consumidor
 (app operativa filtrada por RLS, vistas ejecutivas multi-tenant, análisis puntual).
 
-## 13. Estrategia de Seguridad, Permisos y Aislamiento
+## 13. Estrategia de seguridad, permisos y aislamiento
 
 **Implementado**: aislamiento multi-tenant por estancia vía RLS (`db/estructura/rls.sql`),
 con un rol de aplicación (`app_user`) sin privilegio de superusuario/bypass — condición
 necesaria para que RLS aplique (ver `docs/03_modelo_fisico.md`, sección 6, sobre por qué
 probar RLS conectado como `postgres` es engañoso). El diseño es fail-closed: sin `SET
 app.estancia_id`, las consultas fallan en vez de devolver datos de todas las estancias.
-Verificado con datos reales: un usuario con `app.estancia_id = 2` ve 2 animales y 84
-mediciones; con `app.estancia_id = 1`, 6 animales y 269 mediciones — nunca la mezcla.
+Por ejemplo, un usuario con `app.estancia_id = 2` accede a 2 animales y 84 mediciones,
+mientras que con `app.estancia_id = 1` accede a 6 animales y 269 mediciones, sin que un
+contexto pueda ver los datos del otro.
 
 Las políticas cubren las tres operaciones que la aplicación necesita sobre cada tabla
 (`SELECT`, `INSERT`, `UPDATE`) — no solo lectura: un usuario puede registrar un sensor nuevo,
@@ -503,7 +503,7 @@ preparada para un hash bcrypt aplicado por la aplicación); las columnas de audi
 (`fecha_creacion`, `created_at`) permiten reconstruir cuándo se creó cada registro aunque no
 haya una tabla de auditoría dedicada.
 
-## 14. Consideraciones de Escalabilidad y Rendimiento
+## 14. Consideraciones de escalabilidad y rendimiento
 
 Desarrolladas en `arquitectura/escalabilidad.md`: qué tabla crece más (`mediciones`, por
 órdenes de magnitud sobre el resto), el particionamiento mensual ya implementado y su
@@ -519,21 +519,22 @@ El diseño resultante cubre los cuatro tipos de datos del caso de uso (estructur
 semiestructurados, no estructurados de bajo volumen, vectoriales) en un único motor
 relacional, con cada decisión de modelado (normalización, desnormalización controlada,
 particionamiento, elección de índices) justificada contra una necesidad de consulta real y no
-en abstracto. La diferencia más importante entre esta entrega y una primera versión del diseño
-fue pasar de "documentar" particionamiento, RLS y vistas a **implementarlos y ejecutarlos**:
-ese proceso encontró y corrigió tres problemas reales que solo aparecen al correr el sistema
-—no al leer el diseño— y que quedan documentados como parte del proceso, no ocultados:
+en abstracto. Llevar el particionamiento, las políticas RLS y las vistas más allá del diseño
+en papel, hasta una implementación ejecutable, obligó a resolver tres puntos que el modelo
+lógico por sí solo no deja ver:
 
-1. El particionamiento de `mediciones` estaba documentado pero no implementado (la tabla real
-   no tenía `PARTITION BY`).
-2. El trigger de detección de anomalías generaba falsos positivos sistemáticos con poco
-   historial (desviación estándar de una muestra chica colapsa a 0).
-3. Las políticas RLS nunca se ejecutaban en la práctica porque la única conexión documentada
-   (`postgres`) es superusuario y bypassea RLS por definición de PostgreSQL.
+1. El particionamiento de `mediciones` necesita declararse explícitamente con `PARTITION BY`
+   sobre la tabla real, no alcanza con documentarlo a nivel lógico.
+2. El trigger de detección de anomalías necesita un mínimo de mediciones previas antes de
+   evaluar, porque la desviación estándar de una muestra chica colapsa a 0 y generaría falsos
+   positivos sistemáticos con poco historial.
+3. Las políticas RLS solo tienen efecto si la aplicación se conecta con un rol sin privilegio
+   de superusuario: `postgres` bypassea RLS por definición de PostgreSQL, por lo que la
+   implementación agrega el rol `app_user` para que el aislamiento aplique de verdad.
 
-**Limitaciones reconocidas** (no ocultas, documentadas explícitamente donde corresponde):
-permisos por rol dentro de una estancia (sección 13), rotación automática de particiones
-(`arquitectura/escalabilidad.md`, sección 6), y ausencia de una tabla de auditoría
-centralizada (README, decisiones de diseño). Ninguna es necesaria para demostrar el diseño
-central del caso de uso — monitoreo IoT con detección de anomalías y aislamiento
-multi-tenant — pero se dejan explícitas como trabajo futuro en vez de omitirlas.
+**Limitaciones reconocidas**: permisos por rol dentro de una estancia (sección 13), rotación
+automática de particiones (`arquitectura/escalabilidad.md`, sección 6), y ausencia de una
+tabla de auditoría centralizada (README, decisiones de diseño). Ninguna es necesaria para
+demostrar el diseño central del caso de uso — monitoreo IoT con detección de anomalías y
+aislamiento
+multi-tenant — y quedan planteadas como trabajo futuro.
