@@ -17,10 +17,12 @@ El **modelo físico** implementa el esquema relacional normalizado en PostgreSQL
 ## 2. Extensiones requeridas
 
 ```sql
-CREATE EXTENSION IF NOT EXISTS pgvector;
+CREATE EXTENSION IF NOT EXISTS vector;
 ```
 
-La extensión `pgvector` permite almacenar y consultar vectores de dimensionalidad alta (embeddings de 768 dimensiones para patrones de consumo).
+El nombre de la extensión en PostgreSQL es `vector` (el proyecto se llama "pgvector", pero
+`CREATE EXTENSION pgvector` falla — es un error común). Permite almacenar y consultar vectores
+de dimensionalidad alta (embeddings de 768 dimensiones para patrones de consumo).
 
 ---
 
@@ -208,11 +210,14 @@ COMMENT ON COLUMN animales.ubicacion_actual_id IS 'Desnormalizado: ubicación ac
 
 ---
 
-### 3.7 MEDICIONES (sin particionamiento en esta vista)
+### 3.7 MEDICIONES (particionada por rango de `timestamp`)
 
 ```sql
+-- PARTITION BY exige que toda PK/UNIQUE incluya la columna de partición: por eso la PK es
+-- (id, timestamp) y no id simple. La unicidad de id la sigue garantizando el generador
+-- (seq_mediciones); ver particiones.sql para las particiones reales.
 CREATE TABLE mediciones (
-  id BIGINT PRIMARY KEY,
+  id BIGINT NOT NULL,
   dispositivo_id BIGINT NOT NULL,
   sensor_id BIGINT NOT NULL,
   animal_id BIGINT,
@@ -226,7 +231,8 @@ CREATE TABLE mediciones (
   puntuacion_anomalia DECIMAL(5,3),
   embedding_patron vector(768),
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  
+
+  CONSTRAINT pk_mediciones PRIMARY KEY (id, timestamp),
   CONSTRAINT fk_mediciones_dispositivo FOREIGN KEY (dispositivo_id) REFERENCES dispositivos(id),
   CONSTRAINT fk_mediciones_sensor FOREIGN KEY (sensor_id) REFERENCES sensores(id),
   CONSTRAINT fk_mediciones_animal FOREIGN KEY (animal_id) REFERENCES animales(id) ON DELETE SET NULL,
@@ -235,9 +241,9 @@ CREATE TABLE mediciones (
   CONSTRAINT chk_temperatura CHECK (temperatura_ambiental_celsius BETWEEN -40 AND 50),
   CONSTRAINT chk_humedad CHECK (humedad_ambiental_pct BETWEEN 0 AND 100),
   CONSTRAINT chk_puntuacion_anomalia CHECK (puntuacion_anomalia BETWEEN 0 AND 1 OR puntuacion_anomalia IS NULL)
-);
+) PARTITION BY RANGE (timestamp);
 
-COMMENT ON TABLE mediciones IS 'Registros de consumo individual - tabla principal de hechos';
+COMMENT ON TABLE mediciones IS 'Registros de consumo individual - tabla principal de hechos, particionada por mes';
 COMMENT ON COLUMN mediciones.embedding_patron IS 'Vector de similitud generado por modelo de embeddings';
 ```
 
@@ -285,63 +291,40 @@ COMMENT ON COLUMN alertas.datos_contextuales IS 'Contexto que generó la alerta 
 
 ## 4. Particionamiento temporal de MEDICIONES
 
+`mediciones` ya se crea `PARTITION BY RANGE (timestamp)` en `schema.sql` (sección 3.7); este
+archivo (`db/estructura/particiones.sql`) solo agrega las particiones concretas — una por mes
+de 2026 más una partición `DEFAULT` que evita que un `INSERT` falle si su timestamp cae fuera
+de los rangos explícitos (por ejemplo, datos de prueba fechados en 2025):
+
 ```sql
--- Crear tabla partida (en versión final, reemplazar tabla anterior)
--- Estructura: MEDICIONES particionada por rango de timestamp (mensual)
-
--- Nota: En PostgreSQL, el particionamiento se realiza en la creación de tabla.
--- Esta es una guía de cómo hacerlo:
-
-CREATE TABLE mediciones_particionada (
-  id BIGINT PRIMARY KEY,
-  dispositivo_id BIGINT NOT NULL,
-  sensor_id BIGINT NOT NULL,
-  animal_id BIGINT,
-  timestamp TIMESTAMP NOT NULL,
-  valor_medido DECIMAL(10,3) NOT NULL,
-  duracion_evento_segundos INTEGER,
-  temperatura_ambiental_celsius DECIMAL(5,2),
-  humedad_ambiental_pct DECIMAL(5,2),
-  datos_crudos JSONB,
-  es_anomalia BOOLEAN NOT NULL DEFAULT FALSE,
-  puntuacion_anomalia DECIMAL(5,3),
-  embedding_patron vector(768),
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  
-  CONSTRAINT fk_mediciones_dispositivo FOREIGN KEY (dispositivo_id) REFERENCES dispositivos(id),
-  CONSTRAINT fk_mediciones_sensor FOREIGN KEY (sensor_id) REFERENCES sensores(id),
-  CONSTRAINT fk_mediciones_animal FOREIGN KEY (animal_id) REFERENCES animales(id) ON DELETE SET NULL,
-  CONSTRAINT chk_valor_medido CHECK (valor_medido >= 0),
-  CONSTRAINT chk_duracion_evento CHECK (duracion_evento_segundos > 0 OR duracion_evento_segundos IS NULL),
-  CONSTRAINT chk_temperatura CHECK (temperatura_ambiental_celsius BETWEEN -40 AND 50),
-  CONSTRAINT chk_humedad CHECK (humedad_ambiental_pct BETWEEN 0 AND 100),
-  CONSTRAINT chk_puntuacion_anomalia CHECK (puntuacion_anomalia BETWEEN 0 AND 1 OR puntuacion_anomalia IS NULL)
-) PARTITION BY RANGE (timestamp);
-
--- Crear particiones mensuales (ejemplo: 2026)
-CREATE TABLE mediciones_2026_01 PARTITION OF mediciones_particionada
+CREATE TABLE mediciones_2026_01 PARTITION OF mediciones
   FOR VALUES FROM ('2026-01-01') TO ('2026-02-01');
 
-CREATE TABLE mediciones_2026_02 PARTITION OF mediciones_particionada
+CREATE TABLE mediciones_2026_02 PARTITION OF mediciones
   FOR VALUES FROM ('2026-02-01') TO ('2026-03-01');
 
--- ... continuar para todos los meses
+-- ... una partición por cada mes de 2026 (ver particiones.sql para las 12 completas)
 
--- Crear índices en tabla partida
-CREATE INDEX idx_mediciones_timestamp ON mediciones_particionada(timestamp DESC);
-CREATE INDEX idx_mediciones_animal ON mediciones_particionada(animal_id, timestamp DESC);
-CREATE INDEX idx_mediciones_dispositivo ON mediciones_particionada(dispositivo_id, timestamp DESC);
-CREATE INDEX idx_mediciones_anomalia ON mediciones_particionada(es_anomalia, timestamp DESC);
+CREATE TABLE mediciones_2026_12 PARTITION OF mediciones
+  FOR VALUES FROM ('2026-12-01') TO ('2027-01-01');
 
--- Índice parcial para anomalías
-CREATE INDEX idx_mediciones_anomalia_parcial ON mediciones_particionada(animal_id, timestamp DESC) 
-  WHERE es_anomalia = TRUE;
+-- Partición de respaldo: cualquier timestamp fuera de los rangos mensuales explícitos
+CREATE TABLE mediciones_default PARTITION OF mediciones DEFAULT;
 ```
 
+Los índices de `indexes.sql` (sección 5) se crean **después** de este script, sobre la tabla
+particionada `mediciones`: PostgreSQL propaga automáticamente cada `CREATE INDEX` a todas las
+particiones existentes, y a cualquier partición que se agregue después. Lo mismo aplica a los
+triggers (sección 7) y a las políticas RLS (sección 6): se definen una sola vez sobre la tabla
+particionada y valen para todas sus particiones sin repetir la definición.
+
 **Ventajas del particionamiento temporal**:
-- Queries por rango de fecha son más rápidas (escanea solo particiones relevantes)
-- Mantenimiento: eliminar datos antiguos es TRUNCATE de una partición
-- Escalabilidad: agregar nuevas particiones mensualmente de forma automática
+- Queries por rango de fecha son más rápidas (escanea solo particiones relevantes — partition
+  pruning, aprovechado por las consultas representativas 1 y 2)
+- Mantenimiento: eliminar datos antiguos es `DROP TABLE mediciones_2024_01` en vez de un
+  `DELETE` masivo
+- Escalabilidad: agregar nuevas particiones mensualmente (tarea operativa recurrente, no
+  automática — ver `arquitectura/escalabilidad.md`, sección 2, para el trade-off)
 
 ---
 
@@ -376,8 +359,34 @@ CREATE INDEX idx_alertas_estado_timestamp ON alertas(estado, timestamp_alerta DE
 
 ## 6. Row-Level Security (RLS) para multi-tenancy
 
+La estrategia real (implementada en `db/estructura/rls.sql`) usa una variable de sesión
+(`app.estancia_id`) fijada por la aplicación al conectar, en vez de resolver la estancia con
+una subconsulta a `usuarios` en cada política — es más simple y evita una vuelta extra a la
+base en cada fila evaluada. Es la misma técnica que se muestra en el ejemplo simplificado del
+informe técnico.
+
+**Importante — un superusuario bypassea RLS**: PostgreSQL ignora las políticas RLS para
+superusuarios y para el dueño de la tabla, sin importar cuántas políticas existan. El
+contenedor de `docker-compose.yml` crea al usuario `postgres` como superusuario (necesario
+para que `docker-entrypoint-initdb.d` pueda crear tablas, roles y extensiones), así que
+**conectarse como `postgres` para "probar" RLS siempre va a mostrar todas las filas** — no es
+que las políticas fallen, es que no aplican. Por eso `rls.sql` crea además un rol de
+aplicación sin ese privilegio:
+
 ```sql
--- Habilitar RLS en tablas de datos
+-- Rol de aplicación: NOSUPERUSER + NOBYPASSRLS (el valor por defecto de un rol nuevo ya es
+-- NOBYPASSRLS; se lo deja explícito para que la intención quede clara en el script)
+CREATE ROLE app_user LOGIN PASSWORD 'app_user_password' NOSUPERUSER NOBYPASSRLS;
+
+GRANT CONNECT ON DATABASE monitoreo_iot_ganaderia TO app_user;
+GRANT USAGE ON SCHEMA public TO app_user;
+GRANT SELECT, INSERT, UPDATE ON
+  estancias, usuarios, ubicaciones, dispositivos, sensores, animales, mediciones, alertas
+  TO app_user;
+
+-- Habilitar RLS en tablas de datos (incluida ESTANCIAS: sin esto, cualquier usuario
+-- autenticado podría listar estancias que no son la suya)
+ALTER TABLE estancias ENABLE ROW LEVEL SECURITY;
 ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ubicaciones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dispositivos ENABLE ROW LEVEL SECURITY;
@@ -386,56 +395,55 @@ ALTER TABLE animales ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mediciones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE alertas ENABLE ROW LEVEL SECURITY;
 
--- Función auxiliar: obtener estancia del usuario actual
-CREATE OR REPLACE FUNCTION obtener_estancia_usuario()
-RETURNS BIGINT AS $$
-BEGIN
-  RETURN (SELECT estancia_id FROM usuarios WHERE id = current_user_id::integer);
-END;
-$$ LANGUAGE plpgsql;
+-- Política RLS en ESTANCIAS: cada usuario ve solo el registro de su propia estancia
+CREATE POLICY estancias_own ON estancias
+  FOR SELECT
+  USING (id = current_setting('app.estancia_id')::BIGINT);
 
 -- Política RLS en USUARIOS: cada usuario ve solo usuarios de su estancia
 CREATE POLICY usuarios_own_estancia ON usuarios
   FOR SELECT
-  USING (estancia_id = (SELECT estancia_id FROM usuarios WHERE id = current_user_id::integer));
-
--- Política RLS en UBICACIONES: acceso solo a ubicaciones de la estancia
-CREATE POLICY ubicaciones_own_estancia ON ubicaciones
-  FOR SELECT
-  USING (estancia_id = (SELECT estancia_id FROM usuarios WHERE id = current_user_id::integer));
-
--- Política RLS en DISPOSITIVOS: acceso mediante cadena FK
-CREATE POLICY dispositivos_own_estancia ON dispositivos
-  FOR SELECT
-  USING (ubicacion_id IN (
-    SELECT id FROM ubicaciones 
-    WHERE estancia_id = (SELECT estancia_id FROM usuarios WHERE id = current_user_id::integer)
-  ));
+  USING (estancia_id = current_setting('app.estancia_id')::BIGINT);
+-- + políticas INSERT/UPDATE equivalentes con WITH CHECK (misma condición)
 
 -- Política RLS en ANIMALES: acceso solo a animales de su estancia
 CREATE POLICY animales_own_estancia ON animales
   FOR SELECT
-  USING (estancia_id = (SELECT estancia_id FROM usuarios WHERE id = current_user_id::integer));
+  USING (estancia_id = current_setting('app.estancia_id')::BIGINT);
 
--- Política RLS en MEDICIONES: acceso solo a mediciones de su estancia
+-- Política RLS en MEDICIONES: acceso vía la cadena dispositivo -> ubicación -> estancia
 CREATE POLICY mediciones_own_estancia ON mediciones
   FOR SELECT
   USING (dispositivo_id IN (
-    SELECT id FROM dispositivos 
-    WHERE ubicacion_id IN (
-      SELECT id FROM ubicaciones 
-      WHERE estancia_id = (SELECT estancia_id FROM usuarios WHERE id = current_user_id::integer)
+    SELECT d.id FROM dispositivos d
+    WHERE d.ubicacion_id IN (
+      SELECT id FROM ubicaciones WHERE estancia_id = current_setting('app.estancia_id')::BIGINT
     )
   ));
 
--- Política RLS en ALERTAS: acceso solo a alertas de su estancia
+-- Política RLS en ALERTAS: acceso vía animal_id o vía dispositivo_id (alertas de hardware
+-- pueden no tener animal asociado)
 CREATE POLICY alertas_own_estancia ON alertas
   FOR SELECT
   USING (
-    animal_id IN (SELECT id FROM animales WHERE estancia_id = (SELECT estancia_id FROM usuarios WHERE id = current_user_id::integer))
-    OR dispositivo_id IN (SELECT id FROM dispositivos WHERE ubicacion_id IN (SELECT id FROM ubicaciones WHERE estancia_id = (SELECT estancia_id FROM usuarios WHERE id = current_user_id::integer)))
+    animal_id IN (SELECT id FROM animales WHERE estancia_id = current_setting('app.estancia_id')::BIGINT)
+    OR dispositivo_id IN (
+      SELECT d.id FROM dispositivos d
+      WHERE d.ubicacion_id IN (
+        SELECT id FROM ubicaciones WHERE estancia_id = current_setting('app.estancia_id')::BIGINT
+      )
+    )
   );
 ```
+
+Ver `db/estructura/rls.sql` para el listado completo (incluye las políticas `INSERT`/`UPDATE`
+de cada tabla, omitidas acá por espacio) y `README.md`, sección "Probar el aislamiento
+multi-tenant (RLS)", para el procedimiento de verificación con `app_user`.
+
+**Fail-closed por diseño**: si una sesión de `app_user` no ejecuta `SET app.estancia_id` antes
+de consultar, `current_setting('app.estancia_id')` lanza un error (`unrecognized configuration
+parameter`) en vez de devolver `NULL` o todas las filas — un bug de la aplicación que se
+olvida de fijar la estancia falla ruidosamente, no filtra datos en silencio.
 
 ---
 
@@ -503,8 +511,75 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER tg_actualizar_ubicacion_animal
 AFTER INSERT ON mediciones
 FOR EACH ROW
+WHEN (NEW.animal_id IS NOT NULL)
 EXECUTE FUNCTION actualizar_ubicacion_animal();
 ```
+
+### 7.3 Trigger: detección automática de anomalías
+
+`BEFORE INSERT OR UPDATE` sobre `mediciones`: compara el nuevo valor contra el promedio ±2
+desviaciones estándar de las mediciones previas del mismo animal en los últimos 7 días.
+
+**Corrección aplicada sobre la primera versión**: con menos de ~5 mediciones previas, la
+desviación estándar de la muestra es 0 (con 1 dato) o un valor muy inestable, así que
+*cualquier* variación normal de un animal sano quedaba marcada como anomalía — se detectó
+este falso positivo al cargar los primeros datos de ejemplo (6 de 17 mediciones marcadas como
+"crítica" incluyendo animales sanos). La versión final exige un mínimo de 5 mediciones previas
+antes de evaluar, y aplica un piso de desviación (5% del promedio) para evitar límites de
+ancho cero cuando el historial fue casi constante:
+
+```sql
+CREATE OR REPLACE FUNCTION detectar_anomalia()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_cantidad_previa INTEGER;
+  v_promedio_7_dias DECIMAL(10,3);
+  v_desviacion DECIMAL(10,3);
+  v_limite_superior DECIMAL(10,3);
+  v_limite_inferior DECIMAL(10,3);
+BEGIN
+  SELECT COUNT(*), COALESCE(AVG(valor_medido), 0), COALESCE(STDDEV(valor_medido), 0)
+  INTO v_cantidad_previa, v_promedio_7_dias, v_desviacion
+  FROM mediciones
+  WHERE animal_id = NEW.animal_id
+    AND timestamp > NEW.timestamp - INTERVAL '7 days'
+    AND timestamp < NEW.timestamp
+    AND id != NEW.id;
+
+  IF NEW.animal_id IS NULL OR v_cantidad_previa < 5 THEN
+    NEW.es_anomalia := FALSE;
+    NEW.puntuacion_anomalia := NULL;
+    RETURN NEW;
+  END IF;
+
+  v_desviacion := GREATEST(v_desviacion, v_promedio_7_dias * 0.05);
+  v_limite_superior := v_promedio_7_dias + (2 * v_desviacion);
+  v_limite_inferior := GREATEST(0, v_promedio_7_dias - (2 * v_desviacion));
+
+  IF NEW.valor_medido > v_limite_superior OR NEW.valor_medido < v_limite_inferior THEN
+    NEW.es_anomalia := TRUE;
+    NEW.puntuacion_anomalia := LEAST(1.0, ABS(NEW.valor_medido - v_promedio_7_dias) / GREATEST(v_desviacion, 0.1));
+  ELSE
+    NEW.es_anomalia := FALSE;
+    NEW.puntuacion_anomalia := 0.0;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER tg_detectar_anomalia
+BEFORE INSERT OR UPDATE ON mediciones
+FOR EACH ROW
+EXECUTE FUNCTION detectar_anomalia();
+```
+
+### 7.4 Trigger: generación automática de alerta ante una anomalía
+
+`AFTER INSERT` sobre `mediciones`, condicionado a `NEW.es_anomalia = TRUE` (ya calculado por
+el trigger anterior, que corre antes por ser `BEFORE INSERT`): inserta una fila en `alertas`
+con severidad proporcional a `puntuacion_anomalia`. Ver `db/estructura/triggers.sql` para la
+función completa (`generar_alerta_anomalia`).
 
 ---
 
@@ -527,47 +602,12 @@ CREATE SEQUENCE seq_alertas START 1 INCREMENT 1;
 
 ## 9. Vistas útiles para consultas frecuentes
 
-```sql
--- Vista: animales con consumo total en últimos 7 días
-CREATE OR REPLACE VIEW animales_consumo_7_dias AS
-SELECT 
-  a.id,
-  a.estancia_id,
-  a.nombre_alias,
-  a.tag_rfid,
-  COALESCE(SUM(m.valor_medido), 0) AS consumo_total_7_dias,
-  COUNT(m.id) AS numero_eventos,
-  ROUND(AVG(m.valor_medido), 2) AS consumo_promedio,
-  ROUND(STDDEV(m.valor_medido), 2) AS desviacion_estandar
-FROM animales a
-LEFT JOIN mediciones m ON a.id = m.animal_id 
-  AND m.timestamp > CURRENT_TIMESTAMP - INTERVAL '7 days'
-GROUP BY a.id, a.estancia_id, a.nombre_alias, a.tag_rfid;
-
--- Vista: alertas activas por estancia
-CREATE OR REPLACE VIEW alertas_activas_por_estancia AS
-SELECT 
-  e.id AS estancia_id,
-  e.nombre AS estancia_nombre,
-  COUNT(al.id) AS cantidad_alertas,
-  COUNT(CASE WHEN al.severidad = 'critica' THEN 1 END) AS criticas,
-  COUNT(CASE WHEN al.severidad = 'alta' THEN 1 END) AS altas,
-  COUNT(CASE WHEN al.estado = 'abierta' THEN 1 END) AS sin_resolver
-FROM estancias e
-LEFT JOIN alertas al ON e.id IN (
-  SELECT estancia_id FROM animales WHERE id = al.animal_id
-) AND al.estado IN ('abierta', 'en_progreso')
-GROUP BY e.id, e.nombre;
-
--- Vista: dispositivos por estado de operación
-CREATE OR REPLACE VIEW dispositivos_por_estado AS
-SELECT 
-  ubicacion_id,
-  estado,
-  COUNT(*) AS cantidad
-FROM dispositivos
-GROUP BY ubicacion_id, estado;
-```
+Implementadas en `db/estructura/views.sql`: `animales_consumo_7_dias`,
+`alertas_con_estancia` (vista auxiliar que resuelve la estancia de una alerta tanto por
+`animal_id` como por `dispositivo_id`, para cubrir alertas de hardware sin animal asociado),
+`alertas_activas_por_estancia` y `dispositivos_por_estado`. La consulta representativa #7
+(`db/consultas/queries_representativas.sql`) usa `alertas_activas_por_estancia` como panorama
+ejecutivo multi-estancia.
 
 ---
 
@@ -591,32 +631,33 @@ GROUP BY ubicacion_id, estado;
 
 ## 11. Script completo de ejecución
 
+El orden real (el que ejecuta `docker-compose.yml` vía `docker-entrypoint-initdb.d`, en orden
+alfabético por el prefijo numérico del nombre de archivo montado):
+
 ```bash
-# Archivo: schema.sql
-# Contiene: CREATE TABLE, CONSTRAINTS, COMMENTS
+# 01: db/estructura/schema.sql       -> CREATE TABLE, CONSTRAINTS, COMMENTS (mediciones ya
+#                                        declarada PARTITION BY RANGE)
+# 02: db/estructura/particiones.sql  -> CREATE TABLE ... PARTITION OF (particiones mensuales)
+# 03: db/estructura/indexes.sql      -> CREATE INDEX (se propaga a todas las particiones)
+# 04: db/estructura/triggers.sql     -> CREATE FUNCTION, CREATE TRIGGER
+# 05: db/estructura/rls.sql          -> CREATE ROLE app_user, ENABLE RLS, CREATE POLICY
+# 06: db/estructura/views.sql        -> CREATE VIEW
+# 07: db/vectorial/embeddings.sql    -> CREATE FUNCTION animales_similares()
+# 08: data/ejemplos/datos_simulados.sql -> INSERT de datos de ejemplo
 
-# Archivo: indexes.sql
-# Contiene: CREATE INDEX (todas las tablas)
+# Particiones e índices van antes que triggers/RLS porque son propiedades estructurales de la
+# tabla; triggers y políticas, al definirse sobre la tabla particionada (no sobre cada
+# partición), no dependen de ese orden pero se agrupan después por claridad.
 
-# Archivo: partitions.sql
-# Contiene: CREATE TABLE ... PARTITION BY RANGE
-
-# Archivo: rls.sql
-# Contiene: ALTER TABLE ENABLE RLS, CREATE POLICY
-
-# Archivo: triggers.sql
-# Contiene: CREATE FUNCTION, CREATE TRIGGER
-
-# Archivo: views.sql
-# Contiene: CREATE VIEW
-
-# Ejecución en orden:
-psql -d base_datos -f schema.sql
-psql -d base_datos -f indexes.sql
-psql -d base_datos -f partitions.sql
-psql -d base_datos -f rls.sql
-psql -d base_datos -f triggers.sql
-psql -d base_datos -f views.sql
+# Ejecución manual (fuera de docker-compose):
+psql -d monitoreo_iot_ganaderia -f db/estructura/schema.sql
+psql -d monitoreo_iot_ganaderia -f db/estructura/particiones.sql
+psql -d monitoreo_iot_ganaderia -f db/estructura/indexes.sql
+psql -d monitoreo_iot_ganaderia -f db/estructura/triggers.sql
+psql -d monitoreo_iot_ganaderia -f db/estructura/rls.sql
+psql -d monitoreo_iot_ganaderia -f db/estructura/views.sql
+psql -d monitoreo_iot_ganaderia -f db/vectorial/embeddings.sql
+psql -d monitoreo_iot_ganaderia -f data/ejemplos/datos_simulados.sql
 ```
 
 ---

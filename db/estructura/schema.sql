@@ -140,8 +140,11 @@ COMMENT ON TABLE animales IS 'Entidades ganaderas individuales con identificaci�
 COMMENT ON COLUMN animales.ubicacion_actual_id IS 'Desnormalizado: ubicación actual para queries rápidas';
 
 -- Tabla MEDICIONES
+-- Particionada por rango de timestamp (ver particiones.sql). El particionamiento exige que
+-- toda clave primaria/unique incluya la columna de partición: por eso la PK es (id, timestamp)
+-- en lugar de id simple. La unicidad de id sigue garantizada por el generador (seq_mediciones).
 CREATE TABLE mediciones (
-  id BIGINT PRIMARY KEY,
+  id BIGINT NOT NULL,
   dispositivo_id BIGINT NOT NULL,
   sensor_id BIGINT NOT NULL,
   animal_id BIGINT,
@@ -155,7 +158,8 @@ CREATE TABLE mediciones (
   puntuacion_anomalia DECIMAL(5,3),
   embedding_patron vector(768),
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  
+
+  CONSTRAINT pk_mediciones PRIMARY KEY (id, timestamp),
   CONSTRAINT fk_mediciones_dispositivo FOREIGN KEY (dispositivo_id) REFERENCES dispositivos(id),
   CONSTRAINT fk_mediciones_sensor FOREIGN KEY (sensor_id) REFERENCES sensores(id),
   CONSTRAINT fk_mediciones_animal FOREIGN KEY (animal_id) REFERENCES animales(id) ON DELETE SET NULL,
@@ -164,9 +168,9 @@ CREATE TABLE mediciones (
   CONSTRAINT chk_temperatura CHECK (temperatura_ambiental_celsius BETWEEN -40 AND 50),
   CONSTRAINT chk_humedad CHECK (humedad_ambiental_pct BETWEEN 0 AND 100),
   CONSTRAINT chk_puntuacion_anomalia CHECK (puntuacion_anomalia BETWEEN 0 AND 1 OR puntuacion_anomalia IS NULL)
-);
+) PARTITION BY RANGE (timestamp);
 
-COMMENT ON TABLE mediciones IS 'Registros de consumo individual - tabla principal de hechos';
+COMMENT ON TABLE mediciones IS 'Registros de consumo individual - tabla principal de hechos, particionada por mes';
 COMMENT ON COLUMN mediciones.embedding_patron IS 'Vector de similitud generado por modelo de embeddings';
 
 -- Tabla ALERTAS

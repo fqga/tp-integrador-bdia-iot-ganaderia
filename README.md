@@ -89,28 +89,32 @@ PostgreSQL fue seleccionado porque:
 ```
 tp-integrador-bdia-iot-ganaderia/
 ├── README.md                          # Este archivo
+├── docker-compose.yml                 # Levanta PostgreSQL + pgvector y corre todo el init
 ├── docs/
-│   ├── informe_tecnico.md            # Documentación detallada
+│   ├── informe_tecnico.md            # Informe completo (15 secciones)
 │   ├── 01_modelo_conceptual.md       # ER y entidades
-│   ├── 02_modelo_logico.md           # Tablas normalizadas
-│   ├── 03_modelo_fisico.md           # SQL implementado
-│   └── 04_arquitectura_datos.md      # Escalabilidad y componentes
+│   ├── 02_modelo_logico.md           # Normalización y modelo lógico
+│   ├── 03_modelo_fisico.md           # SQL físico, particionamiento, RLS, triggers
+│   └── 04_arquitectura_datos.md      # Flujo de datos y componentes
 ├── data/
 │   └── ejemplos/
-│       └── datos_simulados.sql       # INSERT de datos de ejemplo
+│       └── datos_simulados.sql       # Catálogo + 353 mediciones + embeddings de ejemplo
 ├── db/
 │   ├── estructura/
-│   │   ├── schema.sql                # CREATE TABLE + constraints
-│   │   ├── particiones.sql           # Particionamiento temporal
-│   │   └── indexes.sql               # Índices optimizados
+│   │   ├── schema.sql                # CREATE TABLE + constraints (mediciones particionada)
+│   │   ├── particiones.sql           # Particiones mensuales de mediciones
+│   │   ├── indexes.sql                # Índices optimizados (incluye ivfflat vectorial)
+│   │   ├── triggers.sql              # Desnormalización + detección de anomalías + alertas
+│   │   ├── rls.sql                   # Rol app_user + políticas RLS multi-tenant
+│   │   └── views.sql                 # Vistas para consultas frecuentes
 │   ├── consultas/
-│   │   └── queries_representativas.sql # SELECT principales
+│   │   └── queries_representativas.sql # 8 consultas representativas, probadas
 │   └── vectorial/
-│       └── embeddings.sql            # Funciones para pgvector
+│       └── embeddings.sql            # Función animales_similares() (búsqueda por similitud)
 ├── vectorial/
-│   └── modelo_vectorial.md           # Estrategia de embeddings
+│   └── modelo_vectorial.md           # Qué se vectoriza, metadatos, aislamiento RLS
 ├── arquitectura/
-│   └── escalabilidad.md              # Análisis de crecimiento
+│   └── escalabilidad.md              # Particiones, índices, qué separar al crecer
 └── .gitignore
 ```
 
@@ -142,11 +146,14 @@ Espera 10 segundos a que la base de datos esté lista.
 docker-compose exec postgres psql -U postgres -d monitoreo_iot_ganaderia -c "\dt"
 ```
 
-Deberías ver las 8 tablas creadas.
+Deberías ver las 8 tablas del modelo (`estancias`, `usuarios`, `ubicaciones`, `dispositivos`,
+`sensores`, `animales`, `alertas`, y `mediciones` como tabla particionada) más sus 13
+particiones (`mediciones_2026_01` … `mediciones_2026_12` y `mediciones_default`) — 21 filas en
+total en el listado.
 
 ### Conectarse a la base de datos
 
-**Opción A: Desde terminal**
+**Opción A: Desde terminal (usuario administrador, sin RLS)**
 ```bash
 docker-compose exec postgres psql -U postgres -d monitoreo_iot_ganaderia
 ```
@@ -160,6 +167,23 @@ docker-compose exec postgres psql -U postgres -d monitoreo_iot_ganaderia
    - Database: `monitoreo_iot_ganaderia`
    - Username: `postgres`
    - Password: `postgres_password_123`
+
+### Probar el aislamiento multi-tenant (RLS)
+
+`postgres` es superusuario, y PostgreSQL **bypassea RLS para superusuarios** aunque las
+políticas existan y estén habilitadas. Para probar el aislamiento de verdad hay que conectarse
+con el rol de aplicación que crea `db/estructura/rls.sql` (`app_user`), y fijar la estancia
+activa con `SET app.estancia_id` antes de consultar — sin ese SET, las consultas fallan
+(fail-closed) en lugar de devolver datos de todas las estancias:
+
+```bash
+docker-compose exec postgres psql -U app_user -d monitoreo_iot_ganaderia
+# password: app_user_password
+```
+```sql
+SET app.estancia_id = 2;
+SELECT id, nombre_alias FROM animales;  -- solo animales de la Estancia 2
+```
 
 ### Detener la base de datos
 ```bash
@@ -206,12 +230,17 @@ Se decide no incluir tabla de auditoría para simplificar scope. Focus en datos 
 
 ## Consultas Representativas Incluidas
 
-1. **Consumo total por animal en período**: tendencias individuales
-2. **Animales con baja consumo**: detección de problemas de salud
-3. **Patrones de consumo por ubicación**: comparación entre corrales
-4. **Alertas sin resolver**: casos abiertos
-5. **Anomalías por similitud vectorial**: detectar comportamientos atípicos
-6. **Consumo histórico vs promedio**: desviaciones en tiempo real
+Las 8 consultas de `db/consultas/queries_representativas.sql`, probadas contra los datos de
+ejemplo (detalle y por qué es útil cada una en `docs/informe_tecnico.md`, sección 10):
+
+1. **Consumo total y promedio por animal (7 días)**: tendencias individuales
+2. **Animales por debajo de su propio histórico**: detección de problemas de salud sin umbral fijo
+3. **Consumo promedio por ubicación**: comparación entre corrales
+4. **Alertas sin resolver, priorizadas**: bandeja de trabajo operativa
+5. **Búsqueda por similitud vectorial**: animales con patrón de consumo parecido (pgvector)
+6. **Promedio móvil por animal (función de ventana)**: vista de detalle para veterinario
+7. **Alertas activas por estancia**: panorama ejecutivo multi-tenant
+8. **Trazabilidad de un caso**: historial completo de mediciones y alertas de un animal
 
 ---
 
@@ -230,6 +259,12 @@ Se utiliza pgvector para crear embeddings de secuencias de consumo. Permite dete
 - No se implementa cache en memoria (Redis)
 - No incluye API REST (solo SQL puro)
 - No modela predicción de fallas (ML está fuera de scope)
+- RLS aísla por **estancia**, no por **rol dentro de la estancia**: un peón y un admin de la
+  misma estancia tienen hoy los mismos permisos de fila (detalle y extensión propuesta en
+  `docs/informe_tecnico.md`, sección 13)
+- La creación de particiones futuras de `mediciones` es manual (no hay un job automático que
+  cree la partición del mes siguiente con anticipación — ver `arquitectura/escalabilidad.md`, sección 6)
+- No hay tabla de auditoría centralizada (decisión de scope, ver sección de decisiones de diseño)
 
 ---
 
@@ -239,7 +274,7 @@ Se utiliza pgvector para crear embeddings de secuencias de consumo. Permite dete
 |----------|--------|
 | Comprensión del caso de uso y relevamiento de datos | ✅ Completo |
 | Modelado de la solución de datos | ✅ ER + Lógico + Físico |
-| Implementación mínima y consultas representativas | ✅ 6 consultas |
+| Implementación mínima y consultas representativas | ✅ 8 consultas |
 | Justificación de la selección tecnológica | ✅ PostgreSQL + pgvector |
 | Propuesta de arquitectura de datos y escalabilidad | ✅ Particionamiento + sharding |
 | Seguridad, permisos y aislamiento | ✅ RLS + Multi-tenancy |
