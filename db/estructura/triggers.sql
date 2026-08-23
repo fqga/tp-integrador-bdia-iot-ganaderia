@@ -62,34 +62,45 @@ WHEN (NEW.animal_id IS NOT NULL)
 EXECUTE FUNCTION actualizar_ubicacion_animal();
 
 -- Trigger 3: Detección automática de anomalías (versión simplificada)
--- Marca como anomalía si consumo está fuera de rango esperado
+-- Marca como anomalía si consumo está fuera de rango esperado (promedio ± 2 desviaciones
+-- estándar de los últimos 7 días).
 CREATE OR REPLACE FUNCTION detectar_anomalia()
 RETURNS TRIGGER AS $$
 DECLARE
+  v_cantidad_previa INTEGER;
   v_promedio_7_dias DECIMAL(10,3);
   v_desviacion DECIMAL(10,3);
   v_limite_superior DECIMAL(10,3);
   v_limite_inferior DECIMAL(10,3);
 BEGIN
-  -- Calcular promedio y desviación estándar de últimos 7 días
-  SELECT 
+  -- Calcular cantidad, promedio y desviación estándar de mediciones previas (últimos 7 días)
+  SELECT
+    COUNT(*),
     COALESCE(AVG(valor_medido), 0),
     COALESCE(STDDEV(valor_medido), 0)
-  INTO v_promedio_7_dias, v_desviacion
+  INTO v_cantidad_previa, v_promedio_7_dias, v_desviacion
   FROM mediciones
   WHERE animal_id = NEW.animal_id
     AND timestamp > NEW.timestamp - INTERVAL '7 days'
+    AND timestamp < NEW.timestamp
     AND id != NEW.id;
-  
-  -- Si no hay datos previos, no marcar como anomalía
-  IF v_promedio_7_dias = 0 THEN
+
+  -- Con menos de 5 mediciones previas no hay línea base confiable: la desviación
+  -- estándar es 0 o indefinida y cualquier variación normal se marcaría como anomalía.
+  -- Se prefiere no evaluar antes que generar falsos positivos.
+  IF NEW.animal_id IS NULL OR v_cantidad_previa < 5 THEN
+    NEW.es_anomalia := FALSE;
+    NEW.puntuacion_anomalia := NULL;
     RETURN NEW;
   END IF;
-  
-  -- Establecer límites: promedio ± 2 desviaciones
+
+  -- Piso mínimo de desviación (5% del promedio) para evitar límites de ancho cero
+  -- cuando el consumo histórico fue casi constante.
+  v_desviacion := GREATEST(v_desviacion, v_promedio_7_dias * 0.05);
+
   v_limite_superior := v_promedio_7_dias + (2 * v_desviacion);
   v_limite_inferior := GREATEST(0, v_promedio_7_dias - (2 * v_desviacion));
-  
+
   -- Marcar como anomalía si está fuera de rango
   IF NEW.valor_medido > v_limite_superior OR NEW.valor_medido < v_limite_inferior THEN
     NEW.es_anomalia := TRUE;
@@ -98,7 +109,7 @@ BEGIN
     NEW.es_anomalia := FALSE;
     NEW.puntuacion_anomalia := 0.0;
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

@@ -11,10 +11,13 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db/estructura/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
-      - ./db/estructura/indexes.sql:/docker-entrypoint-initdb.d/02_indexes.sql
-      - ./db/estructura/triggers.sql:/docker-entrypoint-initdb.d/03_triggers.sql
-      - ./db/estructura/rls.sql:/docker-entrypoint-initdb.d/04_rls.sql
-      - ./data/ejemplos/datos_simulados.sql:/docker-entrypoint-initdb.d/05_datos_simulados.sql
+      - ./db/estructura/particiones.sql:/docker-entrypoint-initdb.d/02_particiones.sql
+      - ./db/estructura/indexes.sql:/docker-entrypoint-initdb.d/03_indexes.sql
+      - ./db/estructura/triggers.sql:/docker-entrypoint-initdb.d/04_triggers.sql
+      - ./db/estructura/rls.sql:/docker-entrypoint-initdb.d/05_rls.sql
+      - ./db/estructura/views.sql:/docker-entrypoint-initdb.d/06_views.sql
+      - ./db/vectorial/embeddings.sql:/docker-entrypoint-initdb.d/07_embeddings.sql
+      - ./data/ejemplos/datos_simulados.sql:/docker-entrypoint-initdb.d/08_datos_simulados.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d monitoreo_iot_ganaderia"]
       interval: 10s
