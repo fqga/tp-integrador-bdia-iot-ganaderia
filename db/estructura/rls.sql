@@ -97,7 +97,27 @@ CREATE POLICY sensores_own_estancia ON sensores
   USING (dispositivo_id IN (
     SELECT d.id FROM dispositivos d
     WHERE d.ubicacion_id IN (
-      SELECT id FROM ubicaciones 
+      SELECT id FROM ubicaciones
+      WHERE estancia_id = current_setting('app.estancia_id')::BIGINT
+    )
+  ));
+
+CREATE POLICY sensores_insert_own_estancia ON sensores
+  FOR INSERT
+  WITH CHECK (dispositivo_id IN (
+    SELECT d.id FROM dispositivos d
+    WHERE d.ubicacion_id IN (
+      SELECT id FROM ubicaciones
+      WHERE estancia_id = current_setting('app.estancia_id')::BIGINT
+    )
+  ));
+
+CREATE POLICY sensores_update_own_estancia ON sensores
+  FOR UPDATE
+  USING (dispositivo_id IN (
+    SELECT d.id FROM dispositivos d
+    WHERE d.ubicacion_id IN (
+      SELECT id FROM ubicaciones
       WHERE estancia_id = current_setting('app.estancia_id')::BIGINT
     )
   ));
@@ -131,7 +151,17 @@ CREATE POLICY mediciones_insert_own_estancia ON mediciones
   WITH CHECK (dispositivo_id IN (
     SELECT d.id FROM dispositivos d
     WHERE d.ubicacion_id IN (
-      SELECT id FROM ubicaciones 
+      SELECT id FROM ubicaciones
+      WHERE estancia_id = current_setting('app.estancia_id')::BIGINT
+    )
+  ));
+
+CREATE POLICY mediciones_update_own_estancia ON mediciones
+  FOR UPDATE
+  USING (dispositivo_id IN (
+    SELECT d.id FROM dispositivos d
+    WHERE d.ubicacion_id IN (
+      SELECT id FROM ubicaciones
       WHERE estancia_id = current_setting('app.estancia_id')::BIGINT
     )
   ));
@@ -157,13 +187,29 @@ CREATE POLICY alertas_insert_own_estancia ON alertas
   FOR INSERT
   WITH CHECK (
     animal_id IN (
-      SELECT id FROM animales 
+      SELECT id FROM animales
       WHERE estancia_id = current_setting('app.estancia_id')::BIGINT
     )
     OR dispositivo_id IN (
       SELECT d.id FROM dispositivos d
       WHERE d.ubicacion_id IN (
-        SELECT id FROM ubicaciones 
+        SELECT id FROM ubicaciones
+        WHERE estancia_id = current_setting('app.estancia_id')::BIGINT
+      )
+    )
+  );
+
+CREATE POLICY alertas_update_own_estancia ON alertas
+  FOR UPDATE
+  USING (
+    animal_id IN (
+      SELECT id FROM animales
+      WHERE estancia_id = current_setting('app.estancia_id')::BIGINT
+    )
+    OR dispositivo_id IN (
+      SELECT d.id FROM dispositivos d
+      WHERE d.ubicacion_id IN (
+        SELECT id FROM ubicaciones
         WHERE estancia_id = current_setting('app.estancia_id')::BIGINT
       )
     )

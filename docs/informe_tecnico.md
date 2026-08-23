@@ -479,6 +479,13 @@ app.estancia_id`, las consultas fallan en vez de devolver datos de todas las est
 Verificado con datos reales: un usuario con `app.estancia_id = 2` ve 2 animales y 84
 mediciones; con `app.estancia_id = 1`, 6 animales y 269 mediciones — nunca la mezcla.
 
+Las políticas cubren las tres operaciones que la aplicación necesita sobre cada tabla
+(`SELECT`, `INSERT`, `UPDATE`) — no solo lectura: un usuario puede registrar un sensor nuevo,
+corregir una medición o resolver una alerta, siempre y cuando esa fila resuelva, por la cadena
+de FK correspondiente, a su propia estancia. No hay política de `DELETE` porque el modelo no
+la necesita: los estados se dan de baja lógicamente (`activo`, `estado`, `fecha_egreso_*`) en
+vez de borrarse, consistente con el resto del diseño (sección 6).
+
 **Limitación reconocida y no implementada en esta entrega**: RLS aísla por *estancia*, no por
 *rol dentro de la estancia*. Un `peón` y un `admin` de la misma estancia tienen hoy los mismos
 permisos de lectura/escritura a nivel de fila — la columna `usuarios.rol` existe y está
