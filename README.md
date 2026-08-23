@@ -1,45 +1,47 @@
 # Sistema de Monitoreo IoT con Análisis Predictivo para Ganadería
- 
+
 ## Información del Proyecto
- 
+
 **Trabajo Práctico Integrador**  
 Carrera de Especialización en Inteligencia Artificial  
-Asignatura: Bases de Datos para Inteligencia Artificial  
+Cátedra: Bases de Datos para Inteligencia Artificial  
 Docente: Martín Lacheski  
 Año: 2026
- 
+
 ---
- 
+
 ## Resumen Ejecutivo
- 
+
 Este proyecto presenta el diseño de una **solución de datos para un sistema de monitoreo IoT en ganadería**. El sistema captura mediciones de consumo individual de animales mediante sensores RFID instalados en comederos inteligentes, permitiendo detectar anomalías, generar alertas predictivas y realizar análisis sobre patrones de consumo.
- 
+
 El enfoque está en el **diseño de la capa de datos** que sustenta una aplicación de IA, no en el entrenamiento de modelos ni en la aplicación completa. Se priorizan aspectos de almacenamiento, consulta, gobernanza, seguridad y escalabilidad.
- 
+
 ---
- 
+
 ## Caso de Uso Seleccionado
- 
+
 **Monitoreo IoT con análisis predictivo**
- 
+
 ### Descripción del Contexto
- 
+
 Una organización ganadera posee comederos inteligentes instalados en diferentes ubicaciones (corrales, encierre, peseada, galpones). Cada comedero está equipado con:
 - **Sensor RFID**: identifica el animal mediante tag único
 - **Sensor de pesaje**: registra cantidad consumida
-- **Sensores ambientales**: temperatura, humedad
+- **Sensores ambientales**: temperatura, humedad (opcionales)
+
 ### Problema a Resolver
- 
+
 1. **Detección de anomalías**: identificar cambios en patrones de consumo que indiquen enfermedad o malestar
 2. **Alertas predictivas**: anticipar problemas de suministro o salud animal
 3. **Análisis histórico**: consultas sobre tendencias de consumo por animal
 4. **Escalabilidad**: manejar millones de registros de mediciones sin degradación de performance
+
 ---
- 
+
 ## Datos Identificados
- 
+
 ### Datos Principales (Estructurados)
- 
+
 - **Usuarios**: peones, encargados, veterinarios, administradores
 - **Estancias**: unidades ganaderas (multi-tenancy)
 - **Ubicaciones**: corrales, encierre, peseada, galpones
@@ -48,31 +50,205 @@ Una organización ganadera posee comederos inteligentes instalados en diferentes
 - **Animales**: entidades ganaderas con tags únicos
 - **Mediciones**: registros periódicos de consumo individual
 - **Alertas**: eventos detectados automáticamente
+
 ### Datos para Análisis Predictivo (Vectoriales)
- 
+
 - Embeddings de patrones de consumo: representaciones vectoriales de secuencias temporales
 - Búsqueda de similitud para detectar comportamientos atípicos
+
 ---
- 
+
 ## Tecnologías Propuestas
- 
+
 ### Base de Datos Principal
 - **PostgreSQL 15+**
   - Modelo relacional normalizado
   - Particionamiento temporal por mediciones
   - Row-Level Security (RLS) para multi-tenancy
   - JSONB para configuraciones flexibles
+
 ### Búsqueda Vectorial
 - **pgvector**: extensión de PostgreSQL para embeddings
   - Almacenamiento de vectores de patrones de consumo
   - Búsqueda por similitud para detectar anomalías
   - Integración nativa con la base relacional
+
 ### Justificación de Elección
- 
+
 PostgreSQL fue seleccionado porque:
 1. Maneja transacciones ACID para garantizar consistencia
 2. Soporta particionamiento temporal eficiente (mediciones > 10M registros/año)
 3. RLS nativa para multi-tenancy sin lógica en aplicación
 4. pgvector integrado para análisis predictivo sin BD separada
 5. Herramienta estándar industrial para este tipo de sistemas
+
 ---
+
+## Estructura del Repositorio
+
+```
+tp-integrador-bdia-iot-ganaderia/
+├── README.md                          # Este archivo
+├── docs/
+│   ├── informe_tecnico.md            # Documentación detallada
+│   ├── 01_modelo_conceptual.md       # ER y entidades
+│   ├── 02_modelo_logico.md           # Tablas normalizadas
+│   ├── 03_modelo_fisico.md           # SQL implementado
+│   └── 04_arquitectura_datos.md      # Escalabilidad y componentes
+├── data/
+│   └── ejemplos/
+│       └── datos_simulados.sql       # INSERT de datos de ejemplo
+├── db/
+│   ├── estructura/
+│   │   ├── schema.sql                # CREATE TABLE + constraints
+│   │   ├── particiones.sql           # Particionamiento temporal
+│   │   └── indexes.sql               # Índices optimizados
+│   ├── consultas/
+│   │   └── queries_representativas.sql # SELECT principales
+│   └── vectorial/
+│       └── embeddings.sql            # Funciones para pgvector
+├── vectorial/
+│   └── modelo_vectorial.md           # Estrategia de embeddings
+├── arquitectura/
+│   └── escalabilidad.md              # Análisis de crecimiento
+└── .gitignore
+```
+
+---
+
+## Instrucciones de Uso
+
+### Requisitos
+- Docker y Docker Compose instalados
+  - Descargar desde: https://www.docker.com/products/docker-desktop/
+
+### Instalación (solo 3 pasos)
+
+**1. Clonar repositorio**
+```bash
+git clone https://github.com/tu-usuario/tp-integrador-bdia-iot-ganaderia.git
+cd tp-integrador-bdia-iot-ganaderia
+```
+
+**2. Levantar contenedor PostgreSQL**
+```bash
+docker-compose up -d
+```
+
+Espera 10 segundos a que la base de datos esté lista.
+
+**3. Verificar que funciona**
+```bash
+docker-compose exec postgres psql -U postgres -d monitoreo_iot_ganaderia -c "\dt"
+```
+
+Deberías ver las 8 tablas creadas.
+
+### Conectarse a la base de datos
+
+**Opción A: Desde terminal**
+```bash
+docker-compose exec postgres psql -U postgres -d monitoreo_iot_ganaderia
+```
+
+**Opción B: Con DBeaver (interfaz gráfica)**
+1. Descargar DBeaver Community: https://dbeaver.io/
+2. Nueva conexión → PostgreSQL
+3. Datos de conexión:
+   - Host: `localhost`
+   - Port: `5432`
+   - Database: `monitoreo_iot_ganaderia`
+   - Username: `postgres`
+   - Password: `postgres_password_123`
+
+### Detener la base de datos
+```bash
+docker-compose down
+```
+
+### Eliminar todo (datos + contenedor)
+```bash
+docker-compose down -v
+```
+
+### Reiniciar desde cero
+```bash
+docker-compose down -v
+docker-compose up -d
+```
+
+---
+
+## Decisiones de Diseño Principales
+
+### 1. Multi-tenancy con Row-Level Security
+Se implementa mediante RLS nativa de PostgreSQL. Cada usuario solo ve datos de su estancia.
+- Ventaja: seguridad en base de datos, no en aplicación
+- Desventaja: overhead mínimo en performance
+
+### 2. Particionamiento Temporal de Mediciones
+Tabla `mediciones` particionada por rango de fecha (mensual).
+- Ventaja: escalabilidad, queries más rápidas, mantenimiento eficiente
+- Desventaja: complejidad en operaciones administrativas
+
+### 3. Normalización 3NF
+El schema está en 3NF. Se mantiene disciplina de normalización para evitar anomalías.
+
+### 4. JSONB para Configuración Flexible
+Dispositivos y sensores almacenan configuración en JSONB.
+- Ventaja: flexibilidad sin migración de schema
+- Desventaja: queries menos eficientes en búsquedas de JSON
+
+### 5. Sin Auditoría Centralizada
+Se decide no incluir tabla de auditoría para simplificar scope. Focus en datos operativos.
+
+---
+
+## Consultas Representativas Incluidas
+
+1. **Consumo total por animal en período**: tendencias individuales
+2. **Animales con baja consumo**: detección de problemas de salud
+3. **Patrones de consumo por ubicación**: comparación entre corrales
+4. **Alertas sin resolver**: casos abiertos
+5. **Anomalías por similitud vectorial**: detectar comportamientos atípicos
+6. **Consumo histórico vs promedio**: desviaciones en tiempo real
+
+---
+
+## Propuestas de Extensión
+
+### Búsqueda Vectorial
+Se utiliza pgvector para crear embeddings de secuencias de consumo. Permite detectar animales con patrones anómalos comparando con el centroide del rebaño.
+
+### Escalabilidad Futura
+- Replicación read-only para reportes analíticos
+- Sharding horizontal si traspasa 100M mediciones/año
+- Data lake para histórico comprimido (parquet en S3)
+- Kafka para streaming de mediciones en tiempo real
+
+### Limitaciones Actuales
+- No se implementa cache en memoria (Redis)
+- No incluye API REST (solo SQL puro)
+- No modela predicción de fallas (ML está fuera de scope)
+
+---
+
+## Criterios de Evaluación Cumplidos
+
+| Criterio | Estado |
+|----------|--------|
+| Comprensión del caso de uso y relevamiento de datos | ✅ Completo |
+| Modelado de la solución de datos | ✅ ER + Lógico + Físico |
+| Implementación mínima y consultas representativas | ✅ 6 consultas |
+| Justificación de la selección tecnológica | ✅ PostgreSQL + pgvector |
+| Propuesta de arquitectura de datos y escalabilidad | ✅ Particionamiento + sharding |
+| Seguridad, permisos y aislamiento | ✅ RLS + Multi-tenancy |
+| Claridad del informe y organización del repo | ✅ Documentado |
+
+---
+
+## Autor
+
+**Facundo Manuel Quiroga**  
+Especialización en Inteligencia Artificial - UBA FIUBA  
+Agosto 2026
