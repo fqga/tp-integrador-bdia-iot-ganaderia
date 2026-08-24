@@ -20,9 +20,9 @@ Año: 2026
 
 ## Resumen ejecutivo
 
-Este proyecto presenta el diseño de una **solución de datos para un sistema de monitoreo IoT en ganadería**. El sistema captura mediciones de consumo individual de animales mediante sensores RFID instalados en comederos inteligentes, permitiendo detectar anomalías, generar alertas predictivas y realizar análisis sobre patrones de consumo.
+Este proyecto presenta el diseño de una solución de datos para un sistema de monitoreo IoT en ganadería. El sistema captura mediciones de consumo individual de animales mediante sensores RFID instalados en comederos inteligentes, permitiendo detectar anomalías, generar alertas predictivas y realizar análisis sobre patrones de consumo.
 
-El enfoque está en el **diseño de la capa de datos** que sustenta una aplicación de IA, no en el entrenamiento de modelos ni en la aplicación completa. Se priorizan aspectos de almacenamiento, consulta, gobernanza, seguridad y escalabilidad.
+El enfoque está en el diseño de la capa de datos que sustenta una aplicación de IA, no en el entrenamiento de modelos ni en la aplicación completa. Se priorizan aspectos de almacenamiento, consulta, gobernanza, seguridad y escalabilidad.
 
 ---
 
@@ -32,7 +32,7 @@ El enfoque está en el **diseño de la capa de datos** que sustenta una aplicaci
 
 ### Descripción del contexto
 
-Una organización ganadera posee comederos inteligentes instalados en diferentes ubicaciones (corrales, encierre, peseada, galpones). Cada comedero está equipado con:
+Una organización ganadera posee comederos inteligentes instalados en diferentes ubicaciones (corrales, encierre, galpones). Cada comedero está equipado con:
 - **Sensor RFID**: identifica el animal mediante tag único
 - **Sensor de pesaje**: registra cantidad consumida
 - **Sensores ambientales**: temperatura, humedad (opcionales)
@@ -168,7 +168,7 @@ docker-compose exec postgres psql -U postgres -d monitoreo_iot_ganaderia
 
 ### Probar el aislamiento multi-tenant (RLS)
 
-`postgres` es superusuario, y PostgreSQL **bypassea RLS para superusuarios** aunque las
+`postgres` es superusuario, y PostgreSQL bypassea RLS para superusuarios aunque las
 políticas existan y estén habilitadas. Para probar el aislamiento de verdad hay que conectarse
 con el rol de aplicación que crea `db/estructura/rls.sql` (`app_user`), y fijar la estancia
 activa con `SET app.estancia_id` antes de consultar — sin ese SET, las consultas fallan
