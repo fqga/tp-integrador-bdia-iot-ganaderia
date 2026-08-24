@@ -3,11 +3,17 @@
 ## Información del proyecto
 
 **Trabajo práctico integrador**  
+
 Carrera de Especialización en Inteligencia Artificial  
+
 Cátedra: Bases de Datos para Inteligencia Artificial  
+
 Alumno: Facundo Manuel Quiroga
+
 Nro de SIU: a2305
+
 Docente: Martín Lacheski  
+
 Año: 2026
 
 ---
@@ -159,16 +165,6 @@ total en el listado.
 ```bash
 docker-compose exec postgres psql -U postgres -d monitoreo_iot_ganaderia
 ```
-
-**Opción B: Con DBeaver (interfaz gráfica)**
-1. Descargar DBeaver Community: https://dbeaver.io/
-2. Nueva conexión → PostgreSQL
-3. Datos de conexión:
-   - Host: `localhost`
-   - Port: `5432`
-   - Database: `monitoreo_iot_ganaderia`
-   - Username: `postgres`
-   - Password: `postgres_password_123`
 
 ### Probar el aislamiento multi-tenant (RLS)
 
