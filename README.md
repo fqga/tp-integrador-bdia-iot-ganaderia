@@ -46,7 +46,7 @@ Una organización ganadera posee comederos inteligentes instalados en diferentes
 
 - **Usuarios**: peones, encargados, veterinarios, administradores
 - **Estancias**: unidades ganaderas (multi-tenancy)
-- **Ubicaciones**: corrales, encierre, peseada, galpones
+- **Ubicaciones**: corrales, encierre, galpones
 - **Dispositivos**: comederos y bebederos inteligentes
 - **Sensores**: componentes de medición (RFID, pesaje, temperatura)
 - **Animales**: entidades ganaderas con tags únicos

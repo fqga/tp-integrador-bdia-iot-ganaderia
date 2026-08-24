@@ -68,11 +68,11 @@ Unidades ganaderas (empresas/predios).
 - Contacto responsable
 
 #### UBICACIONES
-Sectores físicos donde se instalan dispositivos (corrales, encierre, peseada, galpones).
+Sectores físicos donde se instalan dispositivos (corrales, encierre, galpones).
 - Identificador único
 - Estancia a la que pertenece
 - Nombre descriptivo
-- Tipo: corral, encierre, peseada, galpón
+- Tipo: corral, encierre, galpón
 - Capacidad máxima de animales
 - Responsable designado
 
